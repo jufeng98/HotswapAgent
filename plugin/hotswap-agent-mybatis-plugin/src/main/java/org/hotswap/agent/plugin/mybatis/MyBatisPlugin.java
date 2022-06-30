@@ -54,7 +54,8 @@ public class MyBatisPlugin {
     @Init
     ClassLoader appClassLoader;
 
-    Map<String, Object> configurationMap = new HashMap<>();
+    static Map<String, Object> mapperMap = new HashMap<>();
+    static Map<String, Object> configMap = new HashMap<>();
 
     Command reloadConfigurationCommand =
             new ReflectionCommand(this, MyBatisRefreshCommands.class.getName(), "reloadConfiguration");
@@ -64,16 +65,25 @@ public class MyBatisPlugin {
         LOGGER.info("MyBatis plugin initialized.");
     }
 
-    public void registerConfigurationFile(String configFile, Object configObject) {
-        if (configFile != null && !configurationMap.containsKey(configFile)) {
-            LOGGER.debug("MyBatisPlugin - configuration file registered : {}", configFile);
-            configurationMap.put(configFile, configObject);
+    public void registerConfigFile(String configFile, Object xmlConfigBuilder) {
+        LOGGER.info("MyBatisPlugin - config file registered : {}", configFile);
+        if (configFile != null && !configMap.containsKey(configFile)) {
+            configMap.put(configFile, xmlConfigBuilder);
+        }
+    }
+
+    public void registerMapperFile(String mapperFile, Object xmlMapperBuilder) {
+        if (mapperFile != null && !mapperMap.containsKey(mapperFile)) {
+            LOGGER.debug("MyBatisPlugin - mapper file registered : {}", mapperFile);
+            mapperMap.put(mapperFile, xmlMapperBuilder);
         }
     }
 
     @OnResourceFileEvent(path = "/", filter = ".*.xml", events = {FileEvent.MODIFY})
     public void registerResourceListeners(URL url) throws URISyntaxException {
-        if (configurationMap.containsKey(Paths.get(url.toURI()).toFile().getAbsolutePath())) {
+        String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
+        if (mapperMap.containsKey(absolutePath) || configMap.containsKey(absolutePath)) {
+            LOGGER.debug("MyBatisPlugin - registerResourceListeners : {},{}", url, this.getClass().getClassLoader());
             refresh(500);
         }
     }

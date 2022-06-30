@@ -17,21 +17,8 @@
 package org.hotswap.agent.util.spring.util;
 
 import java.beans.Introspector;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.Proxy;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.*;
+import java.util.*;
 
 /**
  * Miscellaneous class utility methods. Mainly for internal use within the
@@ -1352,6 +1339,25 @@ public abstract class ClassUtils {
         } catch (ClassNotFoundException ex) {
             // No interface class found...
             return false;
+        }
+    }
+
+    public static Class<?> getClassFromClassloader(String className, ClassLoader classLoader) {
+        try {
+            Field classesField;
+            classesField = ClassLoader.class.getDeclaredField("classes");
+            classesField.setAccessible(true);
+            Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
+            Class<?> clz = null;
+            for (Class<?> aClass : classes) {
+                if (aClass.getName().equals(className)) {
+                    clz = aClass;
+                    break;
+                }
+            }
+            return clz;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

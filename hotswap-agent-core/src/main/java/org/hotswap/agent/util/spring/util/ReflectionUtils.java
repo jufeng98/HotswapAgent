@@ -130,12 +130,23 @@ public abstract class ReflectionUtils {
      *            the value to set; may be {@code null}
      */
     public static void setField(Field field, Object target, Object value) {
+        makeAccessible(field);
         try {
+            if (Modifier.isFinal(field.getModifiers())) {
+                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                makeAccessible(modifiersField);
+                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+            }
             field.set(target, value);
-        } catch (IllegalAccessException ex) {
+        } catch (Exception ex) {
             handleReflectionException(ex);
             throw new IllegalStateException("Unexpected reflection exception - " + ex.getClass().getName() + ": " + ex.getMessage());
         }
+    }
+
+    public static void setField(String fieldName, Object target, Object value) {
+        Field field = findField(target.getClass(), fieldName);
+        setField(field, target, value);
     }
 
     /**
@@ -161,6 +172,12 @@ public abstract class ReflectionUtils {
             handleReflectionException(ex);
             throw new IllegalStateException("Unexpected reflection exception - " + ex.getClass().getName() + ": " + ex.getMessage());
         }
+    }
+
+    public static <T> T getField(String fieldName, Object target) {
+        Field field = findField(target.getClass(), fieldName);
+        makeAccessible(field);
+        return getField(field, target);
     }
 
     /**
