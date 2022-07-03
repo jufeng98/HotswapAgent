@@ -189,6 +189,7 @@ uses HA services to:
 * [Wicket](plugin/hotswap-agent-wicket-plugin/README.md) - clear wicket caches if property files are changed
 * [WildFlyELResolver](plugin/hotswap-agent-wildfly-el-plugin/README.md) - Clear BeanELResolver after any class redefinition.
 * [ZK](plugin/hotswap-agent-zk-plugin/README.md) (5x-7x) - ZK Framework (http://www.zkoss.org/). Change library properties default values to disable caches, maintains Label cache and bean resolver cache.
+* [Dubbo](plugin/hotswap-agent-dubbo-plugin/README.md) (2.6x) - Dubbo Framework
 
 #### Servlet containers and application servers plugins:
 

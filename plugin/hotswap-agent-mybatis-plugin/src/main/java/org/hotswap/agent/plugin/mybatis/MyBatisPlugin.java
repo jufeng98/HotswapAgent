@@ -66,8 +66,8 @@ public class MyBatisPlugin {
     }
 
     public void registerConfigFile(String configFile, Object xmlConfigBuilder) {
-        LOGGER.info("MyBatisPlugin - config file registered : {}", configFile);
         if (configFile != null && !configMap.containsKey(configFile)) {
+            LOGGER.info("MyBatisPlugin - config file registered : {}", configFile);
             configMap.put(configFile, xmlConfigBuilder);
         }
     }
