@@ -1380,4 +1380,10 @@ public abstract class StringUtils {
         return arrayToDelimitedString(arr, ",");
     }
 
+    public static String defaultString(String str, String def) {
+        if (hasText(str)) {
+            return str;
+        }
+        return def;
+    }
 }

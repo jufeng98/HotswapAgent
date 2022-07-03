@@ -25,15 +25,13 @@ import org.hotswap.agent.javassist.CtField;
 import org.hotswap.agent.javassist.util.proxy.MethodHandler;
 import org.hotswap.agent.javassist.util.proxy.ProxyFactory;
 import org.hotswap.agent.logging.AgentLogger;
+import org.hotswap.agent.util.spring.util.StringUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * @author yudong
- */
 public class ReferenceBeanProxy {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(ReferenceBeanProxy.class);
     private final ReferenceBean<?> referenceBean;
@@ -42,9 +40,14 @@ public class ReferenceBeanProxy {
     private static final Map<String, ReferenceBeanProxy> proxied = new HashMap<>();
 
     public static void refresh(BeanDefinitionRegistry registry) {
-        for (Map.Entry<String, ReferenceBeanProxy> entry : proxied.entrySet()) {
-            entry.getValue().refreshReferenceBean(registry);
-        }
+        Map<String, ReferenceBeanProxy> map = new HashMap<>(proxied);
+        map.forEach((key, value) -> {
+            try {
+                value.refreshReferenceBean(registry);
+            } catch (Exception e) {
+                LOGGER.error("refresh dubbo reference error:{}", e, key);
+            }
+        });
     }
 
     public static void refreshReferenceBean(CtField referenceField) {
@@ -54,9 +57,20 @@ public class ReferenceBeanProxy {
                 return;
             }
             Reference annotation = (Reference) referenceField.getAnnotation(Reference.class);
-            referenceBeanProxy.rebuildReferenceBean(annotation.version(), annotation.url());
+            String version = annotation.version();
+            String url = annotation.url();
+            Integer timeoutInt = annotation.timeout();
+            Integer retriesInt = annotation.retries();
+            Boolean checkBol = annotation.check();
+            referenceBeanProxy.rebuildReferenceBean(
+                    StringUtils.defaultString(version, referenceBeanProxy.referenceBean.getVersion()),
+                    StringUtils.defaultString(url, referenceBeanProxy.referenceBean.getUrl()),
+                    timeoutInt,
+                    retriesInt,
+                    checkBol
+            );
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            LOGGER.error("refresh dubbo referenceField error:{}", e, referenceField.getName());
         }
     }
 
@@ -67,25 +81,35 @@ public class ReferenceBeanProxy {
         BeanDefinition beanDefinition = registry.getBeanDefinition(referenceBean.getId());
         String version = (String) beanDefinition.getPropertyValues().get("version");
         String url = (String) beanDefinition.getPropertyValues().get("url");
-        rebuildReferenceBean(version, url);
+        String timeout = (String) beanDefinition.getPropertyValues().get("timeout");
+        Integer timeoutInt = timeout != null ? Integer.parseInt(timeout) : 0;
+        String retries = (String) beanDefinition.getPropertyValues().get("retries");
+        Integer retriesInt = retries != null ? Integer.parseInt(retries) : 2;
+        String check = (String) beanDefinition.getPropertyValues().get("check");
+        Boolean checkBol = Boolean.parseBoolean(check);
+        rebuildReferenceBean(
+                StringUtils.defaultString(version, referenceBean.getVersion()),
+                StringUtils.defaultString(url, referenceBean.getUrl()),
+                timeoutInt,
+                retriesInt,
+                checkBol
+        );
     }
 
-    public void rebuildReferenceBean(String version, String url) {
+    public void rebuildReferenceBean(String version, String url, Integer timeout, Integer retriesInt, Boolean checkBol) {
         ReferenceBean<?> bean = new ReferenceBean<>();
         bean.setInterface(referenceBean.getInterface());
         bean.setApplication(referenceBean.getApplication());
         bean.setRegistries(referenceBean.getRegistries());
         bean.setClient(referenceBean.getClient());
         bean.setProtocol(referenceBean.getProtocol());
+        bean.setTimeout(timeout);
         bean.setVersion(version);
-        bean.setCheck(false);
+        bean.setRetries(retriesInt);
+        bean.setCheck(checkBol);
         bean.setUrl(url);
-        try {
-            ref = bean.get();
-            LOGGER.info("refresh dubbo reference {}.", referenceBean.getId());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        ref = bean.get();
+        LOGGER.info("refresh dubbo reference {}.", referenceBean.getId());
     }
 
     public static ReferenceBeanProxy getWrapper(ReferenceConfig<?> referenceBean) {
