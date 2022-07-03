@@ -83,7 +83,7 @@ public class MyBatisPlugin {
     public void registerResourceListeners(URL url) throws URISyntaxException {
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
         if (mapperMap.containsKey(absolutePath) || configMap.containsKey(absolutePath)) {
-            LOGGER.debug("MyBatisPlugin - registerResourceListeners : {},{}", url, this.getClass().getClassLoader());
+            LOGGER.debug("MyBatisPlugin - registerResourceListeners : {}", url);
             refresh(500);
         }
     }

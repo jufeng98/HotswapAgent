@@ -7,6 +7,9 @@ import org.hotswap.agent.logging.AgentLogger;
 import org.hotswap.agent.plugin.dubbo.proxy.ReferenceBeanProxy;
 import org.hotswap.agent.util.PluginManagerInvoker;
 
+/**
+ * @author yudong
+ */
 public class DubboTransformers {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(DubboTransformers.class);
 

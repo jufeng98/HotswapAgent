@@ -31,6 +31,9 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @author yudong
+ */
 public class ReferenceBeanProxy {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(ReferenceBeanProxy.class);
     private final ReferenceBean<?> referenceBean;

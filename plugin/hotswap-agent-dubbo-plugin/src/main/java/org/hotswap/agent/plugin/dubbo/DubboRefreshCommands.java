@@ -20,6 +20,9 @@ import java.util.Map;
 
 import static org.hotswap.agent.util.spring.util.ClassUtils.getClassFromClassloader;
 
+/**
+ * @author yudong
+ */
 public class DubboRefreshCommands {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(DubboRefreshCommands.class);
     private static final XmlBeanDefinitionReader definitionReader = new XmlBeanDefinitionReader(new SimpleBeanDefinitionRegistry());

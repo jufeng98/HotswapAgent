@@ -117,7 +117,7 @@ public class ConfigurationProxy {
                 ErrorContext.instance().reset();
             }
         }
-        LOGGER.info("refresh mapper file finished:{}", filesSet);
+        LOGGER.debug("refresh mapper file finished:{}", filesSet);
     }
 
     private XMLConfigBuilder configBuilder;
