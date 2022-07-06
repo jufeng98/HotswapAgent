@@ -13,11 +13,25 @@ import org.hotswap.agent.util.PluginManagerInvoker;
 public class DubboTransformers {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(DubboTransformers.class);
 
+    @OnClassLoadEvent(classNameRegexp = "com.alibaba.dubbo.config.spring.beans.factory.annotation.ReferenceAnnotationBeanPostProcessor")
+    public static void patchAnnotationInjected(CtClass ctClass, ClassPool classPool)
+            throws NotFoundException, CannotCompileException {
+        CtMethod getMethod = ctClass.getDeclaredMethod("doGetInjectedBean");
+        StringBuilder src = new StringBuilder("{");
+        src.append(PluginManagerInvoker.buildInitializePlugin(DubboPlugin.class));
+        src.append(ReferenceBeanProxy.class.getName()).append(".registerDubboProxy(bean,injectedElement,$_);");
+        src.append("return $_;");
+        src.append("}");
+        getMethod.insertAfter(src.toString());
+        LOGGER.info("ReferenceAnnotationBeanPostProcessor patched.");
+    }
+
     @OnClassLoadEvent(classNameRegexp = "com.alibaba.dubbo.config.ReferenceConfig")
     public static void patchReferenceConfig(CtClass ctClass, ClassPool classPool)
             throws NotFoundException, CannotCompileException {
         CtMethod getMethod = ctClass.getDeclaredMethod("get");
         StringBuilder src = new StringBuilder("{");
+        src.append(PluginManagerInvoker.buildInitializePlugin(DubboPlugin.class));
         src.append("return ").append(ReferenceBeanProxy.class.getName()).append(".getWrapper(this).proxy($_);");
         src.append("}");
         getMethod.insertAfter(src.toString());

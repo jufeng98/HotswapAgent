@@ -21,23 +21,28 @@ package org.hotswap.agent.plugin.dubbo.proxy;
 import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.alibaba.dubbo.config.spring.ReferenceBean;
+import org.hotswap.agent.javassist.CtClass;
 import org.hotswap.agent.javassist.CtField;
 import org.hotswap.agent.javassist.util.proxy.MethodHandler;
 import org.hotswap.agent.javassist.util.proxy.ProxyFactory;
 import org.hotswap.agent.logging.AgentLogger;
+import org.hotswap.agent.util.spring.util.ReflectionUtils;
 import org.hotswap.agent.util.spring.util.StringUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ReferenceBeanProxy {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(ReferenceBeanProxy.class);
-    private final ReferenceBean<?> referenceBean;
+    private ReferenceBean<?> referenceBean;
     private Object ref;
     private Object proxyInstance;
     private static final Map<String, ReferenceBeanProxy> proxied = new HashMap<>();
+    private static final Map<String, Object> dubboProxied = new HashMap<>();
 
     public static void refresh(BeanDefinitionRegistry registry) {
         Map<String, ReferenceBeanProxy> map = new HashMap<>(proxied);
@@ -50,9 +55,14 @@ public class ReferenceBeanProxy {
         });
     }
 
-    public static void refreshReferenceBean(CtField referenceField) {
+    public static void refreshReferenceBean(CtField referenceField, CtClass ctClass) {
         try {
-            ReferenceBeanProxy referenceBeanProxy = proxied.get(referenceField.getType().getName());
+            String id = ctClass.getName() + ":" + referenceField.getName();
+            Object dubboProxy = dubboProxied.get(id);
+            Object h = ReflectionUtils.getField("h", dubboProxy);
+            Object bean = ReflectionUtils.getField("bean", h);
+            Object handler = ReflectionUtils.getField("handler", bean);
+            ReferenceBeanProxy referenceBeanProxy = ReflectionUtils.getField("outer", handler);
             if (referenceBeanProxy == null) {
                 return;
             }
@@ -69,6 +79,7 @@ public class ReferenceBeanProxy {
                     retriesInt,
                     checkBol
             );
+            LOGGER.debug("refresh dubbo referenceField:{}", id);
         } catch (Exception e) {
             LOGGER.error("refresh dubbo referenceField error:{}", e, referenceField.getName());
         }
@@ -108,13 +119,30 @@ public class ReferenceBeanProxy {
         bean.setRetries(retriesInt);
         bean.setCheck(checkBol);
         bean.setUrl(url);
-        ref = bean.get();
-        LOGGER.info("refresh dubbo reference {}.", referenceBean.getId());
+        try {
+            Method initMethod = ReferenceConfig.class.getDeclaredMethod("init");
+            initMethod.setAccessible(true);
+            initMethod.invoke(bean);
+            this.ref = ReflectionUtils.getField("ref", bean);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        this.referenceBean = bean;
+        LOGGER.info("refresh dubbo reference {}, new version:{}.", referenceBean.getId(), version);
     }
 
     public static ReferenceBeanProxy getWrapper(ReferenceConfig<?> referenceBean) {
         proxied.put(referenceBean.getId(), new ReferenceBeanProxy((ReferenceBean<?>) referenceBean));
         return proxied.get(referenceBean.getId());
+    }
+
+    public static void registerDubboProxy(Object bean,
+                                          Object injectedElement,
+                                          Object dubboProxyInstance) {
+        Field field = ReflectionUtils.getField("field", injectedElement);
+        String id = bean.getClass().getName() + ":" + field.getName();
+        dubboProxied.put(id, dubboProxyInstance);
+        LOGGER.debug("register dubbo proxy:{},", id);
     }
 
     private ReferenceBeanProxy(ReferenceBean<?> referenceBean) {
@@ -127,7 +155,13 @@ public class ReferenceBeanProxy {
             ProxyFactory factory = new ProxyFactory();
             factory.setInterfaces(new Class[]{referenceBean.getInterfaceClass()});
 
-            MethodHandler handler = (self, overridden, forwarder, args) -> overridden.invoke(ref, args);
+            MethodHandler handler = new MethodHandler() {
+                final ReferenceBeanProxy outer = ReferenceBeanProxy.this;
+                @Override
+                public Object invoke(Object self, Method overridden, Method forwarder, Object[] args) throws Throwable {
+                    return overridden.invoke(outer.ref, args);
+                }
+            };
 
             try {
                 proxyInstance = factory.create(new Class[0], null, handler);

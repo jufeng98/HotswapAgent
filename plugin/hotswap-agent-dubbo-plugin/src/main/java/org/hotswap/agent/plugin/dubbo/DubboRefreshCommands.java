@@ -57,7 +57,7 @@ public class DubboRefreshCommands {
             for (CtField declaredField : entry.getValue().getDeclaredFields()) {
                 Reference reference = (Reference) declaredField.getAnnotation(Reference.class);
                 if (reference != null) {
-                    ReferenceBeanProxy.refreshReferenceBean(declaredField);
+                    ReferenceBeanProxy.refreshReferenceBean(declaredField, entry.getValue());
                 }
             }
 
