@@ -32,6 +32,7 @@ public class DubboPlugin {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(DubboPlugin.class);
     @Init
     Scheduler scheduler;
+    static Object beanFactory;
     static Map<String, Object> beanDefinitions = new HashMap<>(64);
     static Map<String, Object> serviceBeans = new HashMap<>(64);
     static Map<String, String> absolutePaths = new ConcurrentHashMap<>(32);
@@ -61,6 +62,11 @@ public class DubboPlugin {
         String id = ReflectionUtils.getField("id", serviceBean);
         LOGGER.debug("register serviceBean, id:{}", id);
         serviceBeans.put(id, serviceBean);
+    }
+
+    public void registerBeanFactory(Object beanFactory) {
+        LOGGER.debug("register beanFactory:{}", beanFactory);
+        DubboPlugin.beanFactory = beanFactory;
     }
 
     @OnClassFileEvent(classNameRegexp = ".*", events = {FileEvent.MODIFY})

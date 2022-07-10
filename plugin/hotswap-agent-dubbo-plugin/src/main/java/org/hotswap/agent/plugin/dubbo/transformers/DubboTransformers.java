@@ -1,9 +1,13 @@
 package org.hotswap.agent.plugin.dubbo.transformers;
 
 import org.hotswap.agent.annotation.OnClassLoadEvent;
-import org.hotswap.agent.plugin.dubbo.DubboPlugin;
-import org.hotswap.agent.javassist.*;
+import org.hotswap.agent.javassist.CannotCompileException;
+import org.hotswap.agent.javassist.ClassPool;
+import org.hotswap.agent.javassist.CtClass;
+import org.hotswap.agent.javassist.CtMethod;
+import org.hotswap.agent.javassist.NotFoundException;
 import org.hotswap.agent.logging.AgentLogger;
+import org.hotswap.agent.plugin.dubbo.DubboPlugin;
 import org.hotswap.agent.plugin.dubbo.proxy.ReferenceBeanProxy;
 import org.hotswap.agent.util.PluginManagerInvoker;
 
@@ -91,4 +95,17 @@ public class DubboTransformers {
         LOGGER.info("com.alibaba.dubbo.config.spring.schema.DubboBeanDefinitionParser patched.");
     }
 
+    @OnClassLoadEvent(classNameRegexp = "org.springframework.context.support.AbstractApplicationContext")
+    public static void patchAbstractApplicationContext(CtClass ctClass, ClassPool classPool)
+            throws NotFoundException, CannotCompileException {
+        CtMethod method = ctClass.getDeclaredMethod("obtainFreshBeanFactory");
+        StringBuilder src = new StringBuilder("{");
+        src.append(PluginManagerInvoker.buildInitializePlugin(DubboPlugin.class));
+        src.append(PluginManagerInvoker.buildCallPluginMethod(DubboPlugin.class, "registerBeanFactory",
+                "$_", "java.lang.Object"));
+        src.append("return $_;");
+        src.append("}");
+        method.insertAfter(src.toString());
+        LOGGER.info("AbstractApplicationContext patched.");
+    }
 }

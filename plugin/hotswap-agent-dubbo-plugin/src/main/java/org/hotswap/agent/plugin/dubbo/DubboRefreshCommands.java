@@ -14,7 +14,6 @@ import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.ClassPathResource;
 
-import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -31,19 +30,15 @@ public class DubboRefreshCommands {
 
     public static void reloadConfiguration() {
         try {
-            Map<String, String> absolutePaths = getFromPlugin("absolutePaths");
-            if (!absolutePaths.isEmpty()) {
-                refreshXmlChange(absolutePaths);
-            }
+            Map<String, String> absolutePaths = getMapFromPlugin("absolutePaths");
+            refreshXmlChange(absolutePaths);
         } catch (Exception e) {
             LOGGER.error("reloadConfiguration xml error", e);
         }
 
         try {
-            Map<String, CtClass> clazzes = getFromPlugin("clazzes");
-            if (!clazzes.isEmpty()) {
-                refreshClassChange(clazzes);
-            }
+            Map<String, CtClass> clazzes = getMapFromPlugin("clazzes");
+            refreshClassChange(clazzes);
         } catch (Exception e) {
             LOGGER.error("reloadConfiguration class error", e);
         }
@@ -54,20 +49,23 @@ public class DubboRefreshCommands {
         while (iterator.hasNext()) {
             Map.Entry<String, CtClass> entry = iterator.next();
             LOGGER.debug("refresh class:{}", entry.getKey());
-            for (CtField declaredField : entry.getValue().getDeclaredFields()) {
+            CtClass ctClass = entry.getValue();
+            for (CtField declaredField : ctClass.getDeclaredFields()) {
                 Reference reference = (Reference) declaredField.getAnnotation(Reference.class);
                 if (reference != null) {
-                    ReferenceBeanProxy.refreshReferenceBean(declaredField, entry.getValue());
+                    ReferenceBeanProxy.refreshReferenceBean(declaredField, ctClass);
                 }
             }
 
-            Service service = (Service) entry.getValue().getAnnotation(Service.class);
+            Service service = (Service) ctClass.getAnnotation(Service.class);
             if (service != null) {
-                Map<String, Object> serviceBeans = getFromPlugin("serviceBeans");
-                for (CtClass anInterface : entry.getValue().getInterfaces()) {
+                Map<String, Object> serviceBeans = getMapFromPlugin("serviceBeans");
+                for (CtClass anInterface : ctClass.getInterfaces()) {
                     ServiceBean<?> serviceBean = (ServiceBean<?>) serviceBeans.get(anInterface.getName());
                     if (serviceBean != null) {
                         rebuildServiceBean(serviceBean, service.version());
+                    } else {
+                        LOGGER.warning("serviceBean interface:{} not exists", anInterface.getName());
                     }
                 }
             }
@@ -79,12 +77,6 @@ public class DubboRefreshCommands {
         Iterator<Map.Entry<String, String>> iterator = paths.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<String, String> entry = iterator.next();
-            File file = new File(entry.getKey());
-            if (!file.exists()) {
-                LOGGER.debug("xml:{} not exists", entry.getKey());
-                iterator.remove();
-                continue;
-            }
             int index = entry.getKey().indexOf("classes");
             ClassPathResource resource = new ClassPathResource(entry.getKey().substring(index + "classes".length()));
             LOGGER.debug("refresh xml:{}", resource.getPath());
@@ -99,12 +91,13 @@ public class DubboRefreshCommands {
     }
 
     public static void refreshServiceBean(BeanDefinitionRegistry registry) {
-        Map<String, Object> serviceBeans = getFromPlugin("serviceBeans");
+        Map<String, Object> serviceBeans = getMapFromPlugin("serviceBeans");
         Arrays.stream(registry.getBeanDefinitionNames())
                 .forEach(beanDefinitionName -> {
                     BeanDefinition beanDefinition = registry.getBeanDefinition(beanDefinitionName);
                     String id = (String) beanDefinition.getPropertyValues().get("interface");
                     if (serviceBeans.get(id) == null) {
+                        LOGGER.warning("serviceBean id:{} not exists", id);
                         return;
                     }
                     ServiceBean<?> oldBean = (ServiceBean<?>) serviceBeans.get(id);
@@ -133,10 +126,18 @@ public class DubboRefreshCommands {
         }
     }
 
-    public static <T> T getFromPlugin(String name) {
+    public static <T> T getMapFromPlugin(String name) {
         Map<?, ?> val = getFromPlugin(DubboRefreshCommands.class.getClassLoader(), name);
         if (!val.isEmpty()) {
             return (T) val;
+        }
+        return getFromPlugin(ClassLoader.getSystemClassLoader(), name);
+    }
+
+    public static <T> T getObjFromPlugin(String name) {
+        T val = getFromPlugin(DubboRefreshCommands.class.getClassLoader(), name);
+        if (val!=null) {
+            return val;
         }
         return getFromPlugin(ClassLoader.getSystemClassLoader(), name);
     }
@@ -146,7 +147,7 @@ public class DubboRefreshCommands {
         Field field = ReflectionUtils.findField(clz, name);
         ReflectionUtils.makeAccessible(field);
         T obj = ReflectionUtils.getField(field, null);
-        LOGGER.debug("get from plugin, name:{}, val:{}, classloader:{}", name, String.valueOf(obj),
+        LOGGER.debug("get from plugin, name:{}, val:{}, classloader:{}", name, obj + "",
                 classLoader.getClass().getName());
         return obj;
     }
