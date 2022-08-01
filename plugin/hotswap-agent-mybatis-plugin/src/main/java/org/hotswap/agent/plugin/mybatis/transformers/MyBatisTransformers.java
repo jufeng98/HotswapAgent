@@ -55,16 +55,16 @@ public class MyBatisTransformers {
         CtMethod method = ctClass.getDeclaredMethod("createDocument");
         method.insertBefore("{" +
                 "this." + SRC_FILE_NAME_FIELD + " = " + org.hotswap.agent.util.IOUtils.class.getName() + ".extractFileNameFromInputSource($1);" +
-            "}"
+                "}"
         );
         CtMethod newMethod = CtNewMethod.make(
-            "public boolean " + REFRESH_DOCUMENT_METHOD + "() {" +
-                "if(this." + SRC_FILE_NAME_FIELD + "!=null) {" +
-                    "this.document=createDocument(new org.xml.sax.InputSource(new java.io.FileReader(this." + SRC_FILE_NAME_FIELD + ")));" +
-                    "return true;" +
-                "}" +
-                "return false;" +
-            "}", ctClass);
+                "public boolean " + REFRESH_DOCUMENT_METHOD + "() {" +
+                        "if(this." + SRC_FILE_NAME_FIELD + "!=null) {" +
+                        "this.document=createDocument(new org.xml.sax.InputSource(new java.io.FileReader(this." + SRC_FILE_NAME_FIELD + ")));" +
+                        "return true;" +
+                        "}" +
+                        "return false;" +
+                        "}", ctClass);
         ctClass.addMethod(newMethod);
         LOGGER.debug("org.apache.ibatis.parsing.XPathParser patched.");
     }
@@ -86,20 +86,20 @@ public class MyBatisTransformers {
         src.append("this.configuration = " + ConfigurationProxy.class.getName() + ".getWrapper(this).proxy(this.configuration);");
         src.append("}");
 
-        CtClass[] constructorParams = new CtClass[] {
-            classPool.get("org.apache.ibatis.parsing.XPathParser"),
-            classPool.get("java.lang.String"),
-            classPool.get("java.util.Properties")
+        CtClass[] constructorParams = new CtClass[]{
+                classPool.get("org.apache.ibatis.parsing.XPathParser"),
+                classPool.get("java.lang.String"),
+                classPool.get("java.util.Properties")
         };
 
         ctClass.getDeclaredConstructor(constructorParams).insertAfter(src.toString());
         CtMethod newMethod = CtNewMethod.make(
-            "public void " + REFRESH_METHOD + "() {" +
-                "if(" + XPathParserCaller.class.getName() + ".refreshDocument(this.parser)) {" +
-                    "this.parsed=false;" +
-                    "parse();" +
-                "}" +
-            "}", ctClass);
+                "public void " + REFRESH_METHOD + "() {" +
+                        "if(" + XPathParserCaller.class.getName() + ".refreshDocument(this.parser)) {" +
+                        "this.parsed=false;" +
+                        "parse();" +
+                        "}" +
+                        "}", ctClass);
         ctClass.addMethod(newMethod);
         LOGGER.debug("org.apache.ibatis.builder.xml.XMLConfigBuilder patched.");
     }
@@ -112,15 +112,28 @@ public class MyBatisTransformers {
                 XPathParserCaller.class.getName() + ".getSrcFileName(this.parser)", "java.lang.String", "this", "java.lang.Object"));
         src.append("}");
 
-        CtClass[] constructorParams = new CtClass[] {
-            classPool.get("org.apache.ibatis.parsing.XPathParser"),
-            classPool.get("org.apache.ibatis.session.Configuration"),
-            classPool.get("java.lang.String"),
-            classPool.get("java.util.Map")
+        CtClass[] constructorParams = new CtClass[]{
+                classPool.get("org.apache.ibatis.parsing.XPathParser"),
+                classPool.get("org.apache.ibatis.session.Configuration"),
+                classPool.get("java.lang.String"),
+                classPool.get("java.util.Map")
         };
 
         CtConstructor constructor = ctClass.getDeclaredConstructor(constructorParams);
         constructor.insertAfter(src.toString());
         LOGGER.debug("org.apache.ibatis.builder.xml.XMLMapperBuilder patched.");
+    }
+
+    @OnClassLoadEvent(classNameRegexp = "org.apache.ibatis.builder.MapperBuilderAssistant")
+    public static void patchMapperBuilderAssistant(CtClass ctClass, ClassPool classPool) throws NotFoundException, CannotCompileException {
+        CtMethod method = ctClass.getDeclaredMethod("getStatementResultMaps");
+        method.addCatch(
+                "" +
+                        "   if($e.getCause().getClass() == java.lang.IllegalArgumentException.class){" +
+                        "       throw new org.apache.ibatis.builder.IncompleteElementException(\"Could not find result map\", $e.getCause());" +
+                        "    }" +
+                        "    throw $e;",
+                classPool.get("java.lang.reflect.InvocationTargetException"));
+        LOGGER.info("org.apache.ibatis.builder.MapperBuilderAssistant patched.");
     }
 }
