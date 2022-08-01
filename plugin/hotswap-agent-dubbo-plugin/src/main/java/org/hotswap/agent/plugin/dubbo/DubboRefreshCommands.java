@@ -14,12 +14,11 @@ import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.ClassPathResource;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.hotswap.agent.util.spring.util.ClassUtils.getClassFromClassloader;
+import static org.hotswap.agent.util.spring.util.ObjectUtils.getFromPlugin;
 
 /**
  * @author yudong
@@ -127,28 +126,11 @@ public class DubboRefreshCommands {
     }
 
     public static <T> T getMapFromPlugin(String name) {
-        Map<?, ?> val = getFromPlugin(DubboRefreshCommands.class.getClassLoader(), name);
+        Map<?, ?> val = getFromPlugin(DubboRefreshCommands.class.getClassLoader(), DubboPlugin.class.getName(), name);
         if (!val.isEmpty()) {
             return (T) val;
         }
-        return getFromPlugin(ClassLoader.getSystemClassLoader(), name);
+        return getFromPlugin(ClassLoader.getSystemClassLoader(), DubboPlugin.class.getName(), name);
     }
 
-    public static <T> T getObjFromPlugin(String name) {
-        T val = getFromPlugin(DubboRefreshCommands.class.getClassLoader(), name);
-        if (val!=null) {
-            return val;
-        }
-        return getFromPlugin(ClassLoader.getSystemClassLoader(), name);
-    }
-
-    public static <T> T getFromPlugin(ClassLoader classLoader, String name) {
-        Class<?> clz = getClassFromClassloader(DubboPlugin.class.getName(), classLoader);
-        Field field = ReflectionUtils.findField(clz, name);
-        ReflectionUtils.makeAccessible(field);
-        T obj = ReflectionUtils.getField(field, null);
-        LOGGER.debug("get from plugin, name:{}, val:{}, classloader:{}", name, obj + "",
-                classLoader.getClass().getName());
-        return obj;
-    }
 }

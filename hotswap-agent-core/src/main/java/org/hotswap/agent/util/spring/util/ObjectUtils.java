@@ -16,10 +16,15 @@
 
 package org.hotswap.agent.util.spring.util;
 
+import org.hotswap.agent.logging.AgentLogger;
+
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+
+import static org.hotswap.agent.util.spring.util.ClassUtils.getClassFromClassloader;
 
 /**
  * Miscellaneous object utility methods.
@@ -42,6 +47,7 @@ import java.util.Map;
  * @see StringUtils
  */
 public abstract class ObjectUtils {
+    private static final AgentLogger LOGGER = AgentLogger.getLogger(ObjectUtils.class);
 
     private static final int INITIAL_HASH = 7;
     private static final int MULTIPLIER = 31;
@@ -999,4 +1005,13 @@ public abstract class ObjectUtils {
         return sb.toString();
     }
 
+    public static <T> T getFromPlugin(ClassLoader classLoader, String targetClassName, String name) {
+        Class<?> clz = getClassFromClassloader(targetClassName, classLoader);
+        Field field = ReflectionUtils.findField(clz, name);
+        ReflectionUtils.makeAccessible(field);
+        T obj = ReflectionUtils.getField(field, null);
+        LOGGER.debug("get from plugin, name:{}, val:{}, classloader:{}", name, obj + "",
+                classLoader.getClass().getName());
+        return obj;
+    }
 }

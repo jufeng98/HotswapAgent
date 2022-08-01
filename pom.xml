@@ -51,6 +51,7 @@
 <!--        <module>plugin/hotswap-agent-idea-plugin</module>-->
 <!--        <module>plugin/hotswap-agent-weblogic-plugin</module>-->
         <module>plugin/hotswap-agent-dubbo-plugin</module>
+        <module>plugin/hotswap-agent-feign-plugin</module>
         <module>plugin/hotswap-agent-plugins</module>
         <module>hotswap-agent</module>
     </modules>

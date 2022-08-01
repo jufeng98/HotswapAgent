@@ -26,7 +26,7 @@ import org.hotswap.agent.javassist.CtField;
 import org.hotswap.agent.javassist.util.proxy.MethodHandler;
 import org.hotswap.agent.javassist.util.proxy.ProxyFactory;
 import org.hotswap.agent.logging.AgentLogger;
-import org.hotswap.agent.plugin.dubbo.DubboRefreshCommands;
+import org.hotswap.agent.plugin.spring.SpringPlugin;
 import org.hotswap.agent.util.spring.util.ReflectionUtils;
 import org.hotswap.agent.util.spring.util.StringUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -37,6 +37,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class ReferenceBeanProxy {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(ReferenceBeanProxy.class);
@@ -62,7 +63,14 @@ public class ReferenceBeanProxy {
             String id = ctClass.getName() + ":" + referenceField.getName();
             Object dubboProxy = dubboProxied.get(id);
             if (dubboProxy == null) {
-                createNewReferenceBeanToInject(referenceField, ctClass);
+                new Thread(() -> {
+                    try {
+                        TimeUnit.SECONDS.sleep(2);
+                        createNewReferenceBeanToInject(referenceField, ctClass);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
                 return;
             }
             ReferenceBeanProxy referenceBeanProxy = getReferenceBeanProxy(dubboProxy);
@@ -112,7 +120,7 @@ public class ReferenceBeanProxy {
         bean.setCheck(annotation.check());
         bean.setUrl(annotation.url());
         Object proxyBean = bean.get();
-        ConfigurableListableBeanFactory beanFactory = DubboRefreshCommands.getObjFromPlugin("beanFactory");
+        ConfigurableListableBeanFactory beanFactory = SpringPlugin.get(ReferenceBeanProxy.class.getClassLoader());
         Class<?> aClass = Class.forName(ctClass.getName());
         Object target = beanFactory.getBean(aClass);
         ReflectionUtils.setField(referenceField.getName(), target, proxyBean);

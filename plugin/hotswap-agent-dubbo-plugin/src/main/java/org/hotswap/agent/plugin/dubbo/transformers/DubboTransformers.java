@@ -95,17 +95,4 @@ public class DubboTransformers {
         LOGGER.info("com.alibaba.dubbo.config.spring.schema.DubboBeanDefinitionParser patched.");
     }
 
-    @OnClassLoadEvent(classNameRegexp = "org.springframework.context.support.AbstractApplicationContext")
-    public static void patchAbstractApplicationContext(CtClass ctClass, ClassPool classPool)
-            throws NotFoundException, CannotCompileException {
-        CtMethod method = ctClass.getDeclaredMethod("obtainFreshBeanFactory");
-        StringBuilder src = new StringBuilder("{");
-        src.append(PluginManagerInvoker.buildInitializePlugin(DubboPlugin.class));
-        src.append(PluginManagerInvoker.buildCallPluginMethod(DubboPlugin.class, "registerBeanFactory",
-                "$_", "java.lang.Object"));
-        src.append("return $_;");
-        src.append("}");
-        method.insertAfter(src.toString());
-        LOGGER.info("AbstractApplicationContext patched.");
-    }
 }

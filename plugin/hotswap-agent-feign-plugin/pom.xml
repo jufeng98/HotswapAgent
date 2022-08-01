@@ -10,7 +10,7 @@
         <relativePath>../../hotswap-agent-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>hotswap-agent-dubbo-plugin</artifactId>
+    <artifactId>hotswap-agent-feign-plugin</artifactId>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -25,9 +25,14 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>dubbo</artifactId>
-            <version>2.6.6</version>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-openfeign-core</artifactId>
+            <version>2.1.2.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-core</artifactId>
+            <version>10.2.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
@@ -35,18 +40,20 @@
             <version>${org.springframework.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
             <version>${org.springframework.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>${org.springframework.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
         </dependency>
     </dependencies>
 </project>

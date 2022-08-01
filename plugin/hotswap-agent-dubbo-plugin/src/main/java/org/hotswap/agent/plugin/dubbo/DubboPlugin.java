@@ -1,6 +1,10 @@
 package org.hotswap.agent.plugin.dubbo;
 
-import org.hotswap.agent.annotation.*;
+import org.hotswap.agent.annotation.FileEvent;
+import org.hotswap.agent.annotation.Init;
+import org.hotswap.agent.annotation.OnClassFileEvent;
+import org.hotswap.agent.annotation.OnResourceFileEvent;
+import org.hotswap.agent.annotation.Plugin;
 import org.hotswap.agent.command.Command;
 import org.hotswap.agent.command.ReflectionCommand;
 import org.hotswap.agent.command.Scheduler;
@@ -32,7 +36,6 @@ public class DubboPlugin {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(DubboPlugin.class);
     @Init
     Scheduler scheduler;
-    static Object beanFactory;
     static Map<String, Object> beanDefinitions = new HashMap<>(64);
     static Map<String, Object> serviceBeans = new HashMap<>(64);
     static Map<String, String> absolutePaths = new ConcurrentHashMap<>(32);
@@ -62,11 +65,6 @@ public class DubboPlugin {
         String id = ReflectionUtils.getField("id", serviceBean);
         LOGGER.debug("register serviceBean, id:{}", id);
         serviceBeans.put(id, serviceBean);
-    }
-
-    public void registerBeanFactory(Object beanFactory) {
-        LOGGER.debug("register beanFactory:{}", beanFactory);
-        DubboPlugin.beanFactory = beanFactory;
     }
 
     @OnClassFileEvent(classNameRegexp = ".*", events = {FileEvent.MODIFY})

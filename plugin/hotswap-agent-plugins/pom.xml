@@ -237,5 +237,11 @@
             <artifactId>hotswap-agent-dubbo-plugin</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.hotswapagent</groupId>
+            <artifactId>hotswap-agent-feign-plugin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>
