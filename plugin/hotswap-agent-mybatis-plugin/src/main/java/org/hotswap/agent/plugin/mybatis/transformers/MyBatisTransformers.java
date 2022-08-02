@@ -126,7 +126,12 @@ public class MyBatisTransformers {
 
     @OnClassLoadEvent(classNameRegexp = "org.apache.ibatis.builder.MapperBuilderAssistant")
     public static void patchMapperBuilderAssistant(CtClass ctClass, ClassPool classPool) throws NotFoundException, CannotCompileException {
-        CtMethod method = ctClass.getDeclaredMethod("getStatementResultMaps");
+        CtMethod method;
+        try {
+            method = ctClass.getDeclaredMethod("getStatementResultMaps");
+        } catch (NotFoundException e) {
+            method = ctClass.getDeclaredMethod("setStatementResultMap");
+        }
         method.addCatch(
                 "" +
                         "   if($e.getCause().getClass() == java.lang.IllegalArgumentException.class){" +
