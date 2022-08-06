@@ -27,8 +27,11 @@ import org.hotswap.agent.javassist.util.proxy.MethodHandler;
 import org.hotswap.agent.javassist.util.proxy.ProxyFactory;
 import org.hotswap.agent.logging.AgentLogger;
 import org.hotswap.agent.plugin.spring.SpringPlugin;
+import org.hotswap.agent.util.spring.util.ClassUtils;
 import org.hotswap.agent.util.spring.util.ReflectionUtils;
 import org.hotswap.agent.util.spring.util.StringUtils;
+import org.springframework.aop.framework.AopProxyUtils;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -37,6 +40,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class ReferenceBeanProxy {
@@ -121,9 +125,12 @@ public class ReferenceBeanProxy {
         bean.setUrl(annotation.url());
         Object proxyBean = bean.get();
         ConfigurableListableBeanFactory beanFactory = SpringPlugin.get(ReferenceBeanProxy.class.getClassLoader());
-        Class<?> aClass = Class.forName(ctClass.getName());
+        Class<?> aClass = ClassUtils.getClassFromClassloader(ctClass.getName(), ReferenceBeanProxy.class.getClassLoader());
         Object target = beanFactory.getBean(aClass);
-        ReflectionUtils.setField(referenceField.getName(), target, proxyBean);
+        if (AopUtils.isAopProxy(target) || AopUtils.isJdkDynamicProxy(target)) {
+            target = AopProxyUtils.getSingletonTarget(target);
+        }
+        ReflectionUtils.setField(referenceField.getName(), Objects.requireNonNull(target), proxyBean);
         String id = aClass.getName() + ":" + referenceField.getName();
         dubboProxied.put(id, proxyBean);
         beanFactory.registerSingleton(id, proxyBean);

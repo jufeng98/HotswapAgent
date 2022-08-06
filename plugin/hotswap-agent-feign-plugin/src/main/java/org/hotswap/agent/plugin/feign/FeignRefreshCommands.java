@@ -78,6 +78,7 @@ public class FeignRefreshCommands {
                 newUrl = (String) ORIGINAL_MAP.get(feignName + ":url");
             } else {
                 client = new Client.Default(null, null);
+                newUrl = "http://" + newUrl;
             }
             for (Object methodHandler : dispatchObj.values()) {
                 Client originalClient = ReflectionUtils.getField("client", methodHandler);

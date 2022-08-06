@@ -176,6 +176,9 @@ public abstract class ReflectionUtils {
 
     public static <T> T getField(String fieldName, Object target) {
         Field field = findField(target.getClass(), fieldName);
+        if (field == null) {
+            return null;
+        }
         makeAccessible(field);
         return getField(field, target);
     }
