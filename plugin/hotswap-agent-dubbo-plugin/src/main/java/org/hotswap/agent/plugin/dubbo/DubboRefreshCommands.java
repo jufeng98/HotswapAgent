@@ -107,6 +107,10 @@ public class DubboRefreshCommands {
     }
 
     public static void rebuildServiceBean(ServiceBean<?> oldBean, String version) {
+        boolean register = Boolean.parseBoolean(System.getProperty("dubbo.registry.register"));
+        if (!register) {
+            return;
+        }
         try {
             ServiceBean<Object> bean = new ServiceBean<>();
             bean.setApplication(oldBean.getApplication());
