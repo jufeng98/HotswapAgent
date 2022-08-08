@@ -95,7 +95,7 @@ public class ReferenceBeanProxy {
                     retriesInt,
                     checkBol
             );
-            LOGGER.debug("refresh dubbo referenceField:{}", id);
+            LOGGER.info("refresh dubbo reference field:{}#{} success", ctClass.getSimpleName(), referenceField.getName());
         } catch (Exception e) {
             LOGGER.error("refresh dubbo referenceField error:{}", e, referenceField.getName());
         }
@@ -134,18 +134,18 @@ public class ReferenceBeanProxy {
         String id = aClass.getName() + ":" + referenceField.getName();
         dubboProxied.put(id, proxyBean);
         beanFactory.registerSingleton(id, proxyBean);
-        LOGGER.info("{} new referenceField inject:{}", target, proxyBean);
+        LOGGER.info("{} new reference field {} inject:{}", target.getClass().getSimpleName(), referenceField.getName(), proxyBean);
     }
 
     public static ReferenceBeanProxy getReferenceBeanProxy(Object dubboProxy) {
         Object h = ReflectionUtils.getField("h", dubboProxy);
         if (h != null) {
             Object bean = ReflectionUtils.getField("bean", h);
-            Object handler = ReflectionUtils.getField("handler", bean);
-            return ReflectionUtils.getField("outer", handler);
+            Object handler = ReflectionUtils.getField("handler", Objects.requireNonNull(bean));
+            return ReflectionUtils.getField("outer", Objects.requireNonNull(handler));
         } else {
             Object handler = ReflectionUtils.getField("handler", dubboProxy);
-            return ReflectionUtils.getField("outer", handler);
+            return ReflectionUtils.getField("outer", Objects.requireNonNull(handler));
         }
     }
 
@@ -169,6 +169,7 @@ public class ReferenceBeanProxy {
                 retriesInt,
                 checkBol
         );
+        LOGGER.info("refresh dubbo reference xml:{} success", referenceBean.getId());
     }
 
     public void rebuildReferenceBean(String version, String url, Integer timeout, Integer retriesInt, Boolean checkBol) {
@@ -192,7 +193,7 @@ public class ReferenceBeanProxy {
             throw new RuntimeException(e);
         }
         this.referenceBean = bean;
-        LOGGER.info("rebuild dubbo reference {}, new version:{}.", referenceBean.getId(), version);
+        LOGGER.debug("rebuild dubbo reference {}, new version:{}.", referenceBean.getId(), version);
     }
 
     public static ReferenceBeanProxy getWrapper(ReferenceConfig<?> referenceBean) {
@@ -204,7 +205,7 @@ public class ReferenceBeanProxy {
                                           Object injectedElement,
                                           Object dubboProxyInstance) {
         Field field = ReflectionUtils.getField("field", injectedElement);
-        String id = bean.getClass().getName() + ":" + field.getName();
+        String id = bean.getClass().getName() + ":" + Objects.requireNonNull(field).getName();
         dubboProxied.put(id, dubboProxyInstance);
         LOGGER.debug("register dubbo proxy:{},", id);
     }

@@ -70,7 +70,7 @@ public class FeignRefreshCommands {
             Object feignService = context.getBean(feignName);
             Object hObj = ReflectionUtils.getField("h", feignService);
 
-            HashMap<?, ?> dispatchObj = ReflectionUtils.getField("dispatch", hObj);
+            HashMap<?, ?> dispatchObj = ReflectionUtils.getField("dispatch", Objects.requireNonNull(hObj));
 
             Client client;
             if (resetFlag) {
@@ -80,20 +80,20 @@ public class FeignRefreshCommands {
                 client = new Client.Default(null, null);
                 newUrl = "http://" + newUrl;
             }
-            for (Object methodHandler : dispatchObj.values()) {
+            for (Object methodHandler : Objects.requireNonNull(dispatchObj).values()) {
                 Client originalClient = ReflectionUtils.getField("client", methodHandler);
                 ORIGINAL_MAP.putIfAbsent(feignName + ":client", originalClient);
                 ReflectionUtils.setField("client", methodHandler, client);
             }
 
             Target.HardCodedTarget<?> hardCodedTarget = ReflectionUtils.getField("target", hObj);
-            String originalUrl = ReflectionUtils.getField("url", hardCodedTarget);
+            String originalUrl = ReflectionUtils.getField("url", Objects.requireNonNull(hardCodedTarget));
             ORIGINAL_MAP.putIfAbsent(feignName + ":url", originalUrl);
             ReflectionUtils.setField("url", hardCodedTarget, newUrl);
             if (resetFlag) {
-                LOGGER.info("reset " + feignName);
+                LOGGER.info("reset {} success" + feignName);
             } else {
-                LOGGER.info(feignName + " url change to " + newUrl);
+                LOGGER.info("{} url change to {} success", feignName, newUrl);
             }
         } catch (Exception e) {
             LOGGER.error("{} error", feignName, e);

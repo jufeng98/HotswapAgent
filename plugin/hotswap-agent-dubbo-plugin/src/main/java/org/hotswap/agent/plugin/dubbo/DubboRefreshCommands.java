@@ -17,6 +17,7 @@ import org.springframework.core.io.ClassPathResource;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.hotswap.agent.util.spring.util.ObjectUtils.getFromPlugin;
 
@@ -81,7 +82,7 @@ public class DubboRefreshCommands {
             LOGGER.debug("refresh xml:{}", resource.getPath());
             BeanDefinitionRegistry registry = definitionReader.getRegistry();
             Map<String, BeanDefinition> beanDefinitionMap = ReflectionUtils.getField("beanDefinitionMap", registry);
-            beanDefinitionMap.clear();
+            Objects.requireNonNull(beanDefinitionMap).clear();
             definitionReader.loadBeanDefinitions(resource);
             ReferenceBeanProxy.refresh(registry);
             refreshServiceBean(registry);
@@ -119,7 +120,7 @@ public class DubboRefreshCommands {
             bean.setVersion(version);
             oldBean.unexport();
             bean.export();
-            LOGGER.info("refresh dubbo service {}", oldBean.getId());
+            LOGGER.info("refresh dubbo service {} success", oldBean.getId());
         } catch (Exception e) {
             LOGGER.error("refresh dubbo service error:{}", e, oldBean.getId());
         }
