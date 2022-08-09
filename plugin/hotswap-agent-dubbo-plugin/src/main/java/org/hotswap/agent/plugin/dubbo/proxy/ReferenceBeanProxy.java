@@ -62,15 +62,31 @@ public class ReferenceBeanProxy {
         });
     }
 
-    public static void refreshReferenceBean(CtField referenceField, CtClass ctClass) {
+    public static void refresh(String interfaceName, String id, String url) {
+        ReferenceBeanProxy referenceBeanProxy = proxied.get(id);
+        if (referenceBeanProxy == null) {
+            referenceBeanProxy = proxied.get(interfaceName);
+        }
+        ReferenceBean<?> original = referenceBeanProxy.referenceBean;
+        referenceBeanProxy.rebuildReferenceBean(original.getVersion(), url, original.getTimeout(), original.getRetries(), original.isCheck());
+        LOGGER.info("refresh dubbo reference properties xml:{}@{} success", interfaceName, id);
+    }
+
+    public static void refreshReferenceBean(CtField referenceField, CtClass ctClass) throws Exception {
+        refreshReferenceBean(ctClass.getName(), referenceField.getName(),
+                referenceField.getType().getName(), (Reference) referenceField.getAnnotation(Reference.class), "");
+    }
+
+    public static void refreshReferenceBean(String clsName, String fieldName, String fieldTypeName,
+                                            Reference reference, String newUrl) {
         try {
-            String id = ctClass.getName() + ":" + referenceField.getName();
+            String id = clsName + ":" + fieldName;
             Object dubboProxy = dubboProxied.get(id);
             if (dubboProxy == null) {
                 new Thread(() -> {
                     try {
                         TimeUnit.SECONDS.sleep(2);
-                        createNewReferenceBeanToInject(referenceField, ctClass);
+                        createNewReferenceBeanToInject(clsName, fieldName, fieldTypeName, reference);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -82,26 +98,25 @@ public class ReferenceBeanProxy {
                 LOGGER.warning("referenceBeanProxy id:{} not exists", id);
                 return;
             }
-            Reference annotation = (Reference) referenceField.getAnnotation(Reference.class);
-            String version = annotation.version();
-            String url = annotation.url();
-            Integer timeoutInt = annotation.timeout();
-            Integer retriesInt = annotation.retries();
-            Boolean checkBol = annotation.check();
+            String version = reference.version();
+            String url = StringUtils.isEmpty(newUrl) ? reference.url() : newUrl;
+            Integer timeoutInt = reference.timeout();
+            Integer retriesInt = reference.retries();
+            Boolean checkBol = reference.check();
             referenceBeanProxy.rebuildReferenceBean(
-                    StringUtils.defaultString(version, referenceBeanProxy.referenceBean.getVersion()),
-                    StringUtils.defaultString(url, referenceBeanProxy.referenceBean.getUrl()),
+                    version,
+                    url,
                     timeoutInt,
                     retriesInt,
                     checkBol
             );
-            LOGGER.info("refresh dubbo reference field:{}#{} success", ctClass.getSimpleName(), referenceField.getName());
+            LOGGER.info("refresh dubbo reference field:{}#{} success", clsName, fieldName);
         } catch (Exception e) {
-            LOGGER.error("refresh dubbo referenceField error:{}", e, referenceField.getName());
+            LOGGER.error("refresh dubbo referenceField error:{}", e, fieldName);
         }
     }
 
-    public static void createNewReferenceBeanToInject(CtField referenceField, CtClass ctClass) throws Exception {
+    public static void createNewReferenceBeanToInject(String clsName, String fieldName, String fieldTypeName, Reference reference) throws Exception {
         ReferenceBeanProxy referenceBeanProxy = null;
         for (Object it : dubboProxied.values()) {
             referenceBeanProxy = getReferenceBeanProxy(it);
@@ -111,30 +126,29 @@ public class ReferenceBeanProxy {
             LOGGER.info("not exists any referenceBean");
             return;
         }
-        Reference annotation = (Reference) referenceField.getAnnotation(Reference.class);
         ReferenceBean<?> bean = new ReferenceBean<>();
-        bean.setInterface(Class.forName(referenceField.getType().getName()));
+        bean.setInterface(Class.forName(fieldTypeName));
         bean.setApplication(referenceBeanProxy.referenceBean.getApplication());
         bean.setRegistries(referenceBeanProxy.referenceBean.getRegistries());
         bean.setClient(referenceBeanProxy.referenceBean.getClient());
         bean.setProtocol(referenceBeanProxy.referenceBean.getProtocol());
-        bean.setTimeout(annotation.timeout());
-        bean.setVersion(annotation.version());
-        bean.setRetries(annotation.retries());
-        bean.setCheck(annotation.check());
-        bean.setUrl(annotation.url());
+        bean.setTimeout(reference.timeout());
+        bean.setVersion(reference.version());
+        bean.setRetries(reference.retries());
+        bean.setCheck(reference.check());
+        bean.setUrl(reference.url());
         Object proxyBean = bean.get();
         ConfigurableListableBeanFactory beanFactory = SpringPlugin.get(ReferenceBeanProxy.class.getClassLoader());
-        Class<?> aClass = ClassUtils.getClassFromClassloader(ctClass.getName(), ReferenceBeanProxy.class.getClassLoader());
+        Class<?> aClass = ClassUtils.getClassFromClassloader(clsName, ReferenceBeanProxy.class.getClassLoader());
         Object target = beanFactory.getBean(aClass);
         if (AopUtils.isAopProxy(target) || AopUtils.isJdkDynamicProxy(target)) {
             target = AopProxyUtils.getSingletonTarget(target);
         }
-        ReflectionUtils.setField(referenceField.getName(), Objects.requireNonNull(target), proxyBean);
-        String id = aClass.getName() + ":" + referenceField.getName();
+        ReflectionUtils.setField(fieldName, Objects.requireNonNull(target), proxyBean);
+        String id = aClass.getName() + ":" + fieldName;
         dubboProxied.put(id, proxyBean);
         beanFactory.registerSingleton(id, proxyBean);
-        LOGGER.info("{} new reference field {} inject:{}", target.getClass().getSimpleName(), referenceField.getName(), proxyBean);
+        LOGGER.info("{} new reference field {} inject:{}", target.getClass().getSimpleName(), fieldName, proxyBean);
     }
 
     public static ReferenceBeanProxy getReferenceBeanProxy(Object dubboProxy) {
@@ -163,8 +177,8 @@ public class ReferenceBeanProxy {
         String check = (String) beanDefinition.getPropertyValues().get("check");
         Boolean checkBol = Boolean.parseBoolean(check);
         rebuildReferenceBean(
-                StringUtils.defaultString(version, referenceBean.getVersion()),
-                StringUtils.defaultString(url, referenceBean.getUrl()),
+                version,
+                url,
                 timeoutInt,
                 retriesInt,
                 checkBol

@@ -39,6 +39,7 @@ public class DubboPlugin {
     static Map<String, Object> beanDefinitions = new HashMap<>(64);
     static Map<String, Object> serviceBeans = new HashMap<>(64);
     static Map<String, String> absolutePaths = new ConcurrentHashMap<>(32);
+    static Map<String, String> absolutePaths1 = new ConcurrentHashMap<>(32);
     static Map<String, CtClass> clazzes = new ConcurrentHashMap<>(32);
     Command reloadConfigurationCommand =
             new ReflectionCommand(this, DubboRefreshCommands.class.getName(), "reloadConfiguration");
@@ -79,6 +80,17 @@ public class DubboPlugin {
         LOGGER.debug("receive xml change:{}", url);
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
         absolutePaths.put(absolutePath, absolutePath);
+        refresh();
+    }
+
+    @OnResourceFileEvent(path = "/", filter = ".*.properties", events = {FileEvent.MODIFY, FileEvent.CREATE})
+    public void registerResourceListeners1(URL url) throws URISyntaxException {
+        if (!url.getPath().contains("hotswap-dubbo")) {
+            return;
+        }
+        LOGGER.debug("receive properties change:{}", url);
+        String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
+        absolutePaths1.put(absolutePath, absolutePath);
         refresh();
     }
 

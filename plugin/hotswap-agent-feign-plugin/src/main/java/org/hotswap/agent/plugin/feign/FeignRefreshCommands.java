@@ -7,11 +7,10 @@ import org.hotswap.agent.plugin.spring.SpringPlugin;
 import org.hotswap.agent.util.spring.util.ReflectionUtils;
 import org.hotswap.agent.util.spring.util.StringUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.core.io.FileSystemResource;
 
+import java.io.InputStream;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -29,38 +28,25 @@ public class FeignRefreshCommands {
     public static void reloadConfiguration() {
         try {
             Map<String, String> absolutePaths = getMapFromPlugin("absolutePaths");
-            refreshYmlChange(absolutePaths);
+            refreshPropertiesChange(absolutePaths);
         } catch (Exception e) {
-            LOGGER.error("reloadConfiguration yml error", e);
+            LOGGER.error("reloadConfiguration error", e);
         }
     }
 
 
-    public static void refreshYmlChange(Map<String, String> paths) {
-        Iterator<Map.Entry<String, String>> iterator = paths.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, String> entry = iterator.next();
+    public static void refreshPropertiesChange(Map<String, String> paths) throws Exception {
+        for (Map.Entry<String, String> entry : new HashMap<>(paths).entrySet()) {
             FileSystemResource resource = new FileSystemResource(entry.getKey());
-            LOGGER.debug("refresh yml:{}", resource.getPath());
-            YamlPropertiesFactoryBean yamlProcessor = new YamlPropertiesFactoryBean();
-            yamlProcessor.setSingleton(true);
-            yamlProcessor.setResources(resource);
-            yamlProcessor.afterPropertiesSet();
-            Properties properties = yamlProcessor.getObject();
-            Map<String, Map<String, String>> map = new HashMap<>();
-            Objects.requireNonNull(properties).forEach((key, value) -> {
-                String k = (String) key;
-                int i = k.lastIndexOf(".");
-                String service = k.substring(0, i);
-                String prop = k.substring(i + 1);
-                Map<String, String> mapProp = map.computeIfAbsent(service, k1 -> new HashMap<>());
-                mapProp.put(prop, (String) value);
-            });
-
+            LOGGER.debug("refresh properties:{}", resource.getPath());
+            Properties properties = new Properties();
+            try (InputStream inputStream = resource.getInputStream()) {
+                properties.load(inputStream);
+            }
             ConfigurableListableBeanFactory context = SpringPlugin.get(FeignRefreshCommands.class.getClassLoader());
-            map.forEach((key, value) -> changeFeignServiceUrl(key, value.get("url"), context));
-            iterator.remove();
+            properties.forEach((key, value) -> changeFeignServiceUrl(key.toString(), value.toString(), context));
         }
+        paths.clear();
     }
 
     public static void changeFeignServiceUrl(String feignName, String newUrl, ConfigurableListableBeanFactory context) {
@@ -70,7 +56,7 @@ public class FeignRefreshCommands {
             Object feignService = context.getBean(feignName);
             Object hObj = ReflectionUtils.getField("h", feignService);
 
-            HashMap<?, ?> dispatchObj = ReflectionUtils.getField("dispatch", Objects.requireNonNull(hObj));
+            Map<?, ?> dispatchObj = ReflectionUtils.getField("dispatch", Objects.requireNonNull(hObj));
 
             Client client;
             if (resetFlag) {

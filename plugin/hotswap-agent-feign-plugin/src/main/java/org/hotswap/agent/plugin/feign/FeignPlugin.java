@@ -40,12 +40,12 @@ public class FeignPlugin {
         LOGGER.info("Feign plugin initialized.");
     }
 
-    @OnResourceFileEvent(path = "/", filter = ".*.yml", events = {FileEvent.MODIFY, FileEvent.CREATE})
+    @OnResourceFileEvent(path = "/", filter = ".*.properties", events = {FileEvent.MODIFY, FileEvent.CREATE})
     public void registerResourceListeners(URL url) throws URISyntaxException {
         if (!url.getPath().contains("hotswap-feign")) {
             return;
         }
-        LOGGER.debug("receive yml change:{}", url);
+        LOGGER.debug("receive properties change:{}", url);
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
         absolutePaths.put(absolutePath, absolutePath);
         refresh();
