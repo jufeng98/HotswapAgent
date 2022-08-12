@@ -17,6 +17,8 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.hotswap.agent.util.spring.util.ObjectUtils.getStaticFieldValue;
+
 /**
  * Reload Feign configuration after entity change.
  *
@@ -40,11 +42,8 @@ public class FeignPlugin {
         LOGGER.info("Feign plugin initialized.");
     }
 
-    @OnResourceFileEvent(path = "/", filter = ".*.properties", events = {FileEvent.MODIFY, FileEvent.CREATE})
+    @OnResourceFileEvent(path = "/", filter = ".*hotswap-feign.properties", events = {FileEvent.MODIFY, FileEvent.CREATE})
     public void registerResourceListeners(URL url) throws URISyntaxException {
-        if (!url.getPath().contains("hotswap-feign")) {
-            return;
-        }
         LOGGER.debug("receive properties change:{}", url);
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
         absolutePaths.put(absolutePath, absolutePath);
@@ -55,4 +54,11 @@ public class FeignPlugin {
         scheduler.scheduleCommand(reloadConfigurationCommand, 500);
     }
 
+    public static <T> T getMapFromPlugin(String name) {
+        Map<?, ?> val = getStaticFieldValue(FeignPlugin.class.getClassLoader(), FeignPlugin.class.getName(), name);
+        if (!val.isEmpty()) {
+            return (T) val;
+        }
+        return getStaticFieldValue(ClassLoader.getSystemClassLoader(), FeignPlugin.class.getName(), name);
+    }
 }

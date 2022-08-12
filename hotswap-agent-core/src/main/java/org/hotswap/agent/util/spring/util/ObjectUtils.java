@@ -1005,12 +1005,20 @@ public abstract class ObjectUtils {
         return sb.toString();
     }
 
-    public static <T> T getFromPlugin(ClassLoader classLoader, String targetClassName, String name) {
+    public static <T> T getStaticFieldValue(String targetClassName, String staticFieldName) {
+        Object object = getStaticFieldValue(ObjectUtils.class.getClassLoader(), targetClassName, staticFieldName);
+        if (object == null) {
+            object = getStaticFieldValue(ClassLoader.getSystemClassLoader(), targetClassName, staticFieldName);
+        }
+        return (T) object;
+    }
+
+    public static <T> T getStaticFieldValue(ClassLoader classLoader, String targetClassName, String staticFieldName) {
         Class<?> clz = getClassFromClassloader(targetClassName, classLoader);
-        Field field = ReflectionUtils.findField(clz, name);
+        Field field = ReflectionUtils.findField(clz, staticFieldName);
         ReflectionUtils.makeAccessible(field);
         T obj = ReflectionUtils.getField(field, null);
-        LOGGER.debug("get from plugin, name:{}, val:{}, classloader:{}", name, obj + "",
+        LOGGER.debug("get from plugin, name:{}, val:{}, classloader:{}", staticFieldName, obj + "",
                 classLoader.getClass().getName());
         return obj;
     }

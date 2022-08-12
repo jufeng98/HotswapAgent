@@ -18,7 +18,7 @@ public class FeignTransformers {
             throws NotFoundException, CannotCompileException {
         CtMethod method = ctClass.getDeclaredMethod("registerBeanDefinitions");
         method.insertBefore(PluginManagerInvoker.buildInitializePlugin(FeignPlugin.class));
-        LOGGER.info("FeignClientsRegistrar patched.");
+        LOGGER.info("org.springframework.cloud.openfeign.FeignClientsRegistrar patched.");
     }
 
 }

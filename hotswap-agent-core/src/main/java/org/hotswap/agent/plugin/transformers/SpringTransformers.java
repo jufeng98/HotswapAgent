@@ -15,9 +15,11 @@ public class SpringTransformers {
     public static void patchAbstractApplicationContext(CtClass ctClass, ClassPool classPool)
             throws NotFoundException, CannotCompileException {
         CtMethod method = ctClass.getDeclaredMethod("obtainFreshBeanFactory");
-        StringBuilder src = new StringBuilder("{");
-        src.append("org.hotswap.agent.plugin.spring.SpringPlugin.set($_);");
-        src.append("return $_;");
+        StringBuilder src = new StringBuilder();
+        src.append("{");
+        src.append("    org.hotswap.agent.plugin.spring.SpringPlugin.setApplicationContext(this);");
+        src.append("    org.hotswap.agent.plugin.spring.SpringPlugin.setBeanFactory($_);");
+        src.append("    return $_;");
         src.append("}");
         method.insertAfter(src.toString());
         LOGGER.info("AbstractApplicationContext patched.");

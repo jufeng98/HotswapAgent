@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.hotswap.agent.util.spring.util.ObjectUtils.getFromPlugin;
+import static org.hotswap.agent.plugin.feign.FeignPlugin.getMapFromPlugin;
 
 /**
  * @author yudong
@@ -43,14 +43,15 @@ public class FeignRefreshCommands {
             try (InputStream inputStream = resource.getInputStream()) {
                 properties.load(inputStream);
             }
-            ConfigurableListableBeanFactory context = SpringPlugin.get(FeignRefreshCommands.class.getClassLoader());
-            properties.forEach((key, value) -> changeFeignServiceUrl(key.toString(), value.toString(), context));
+            properties.forEach((key, value) -> changeFeignServiceUrl(key.toString(), value.toString()));
         }
         paths.clear();
     }
 
-    public static void changeFeignServiceUrl(String feignName, String newUrl, ConfigurableListableBeanFactory context) {
+    public static void changeFeignServiceUrl(String feignName, String newUrl) {
         try {
+            ConfigurableListableBeanFactory context = SpringPlugin.getBeanFactory();
+
             boolean resetFlag = StringUtils.isEmpty(newUrl);
 
             Object feignService = context.getBean(feignName);
@@ -73,25 +74,17 @@ public class FeignRefreshCommands {
             }
 
             Target.HardCodedTarget<?> hardCodedTarget = ReflectionUtils.getField("target", hObj);
-            String originalUrl = ReflectionUtils.getField("url", Objects.requireNonNull(hardCodedTarget));
+            String originalUrl = ReflectionUtils.getField("url", hardCodedTarget);
             ORIGINAL_MAP.putIfAbsent(feignName + ":url", originalUrl);
             ReflectionUtils.setField("url", hardCodedTarget, newUrl);
             if (resetFlag) {
-                LOGGER.info("reset {} success" + feignName);
+                LOGGER.info("reset {} success", feignName);
             } else {
                 LOGGER.info("{} url change to {} success", feignName, newUrl);
             }
         } catch (Exception e) {
             LOGGER.error("{} error", feignName, e);
         }
-    }
-
-    public static <T> T getMapFromPlugin(String name) {
-        Map<?, ?> val = getFromPlugin(FeignRefreshCommands.class.getClassLoader(), FeignPlugin.class.getName(), name);
-        if (!val.isEmpty()) {
-            return (T) val;
-        }
-        return getFromPlugin(ClassLoader.getSystemClassLoader(), FeignPlugin.class.getName(), name);
     }
 
 }

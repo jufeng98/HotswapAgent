@@ -167,6 +167,7 @@ public abstract class ReflectionUtils {
     @SuppressWarnings("unchecked")
     public static <T> T getField(Field field, Object target) {
         try {
+            field.setAccessible(true);
             return (T) field.get(target);
         } catch (IllegalAccessException ex) {
             handleReflectionException(ex);
@@ -176,9 +177,6 @@ public abstract class ReflectionUtils {
 
     public static <T> T getField(String fieldName, Object target) {
         Field field = findField(target.getClass(), fieldName);
-        if (field == null) {
-            return null;
-        }
         makeAccessible(field);
         return getField(field, target);
     }
@@ -268,6 +266,7 @@ public abstract class ReflectionUtils {
     @SuppressWarnings("unchecked")
     public static <T> T invokeMethod(Method method, Object target, Object... args) {
         try {
+            method.setAccessible(true);
             return (T) method.invoke(target, args);
         } catch (Exception ex) {
             handleReflectionException(ex);
