@@ -1,4 +1,4 @@
-package org.hotswap.agent.plugin.jrebel;
+package org.hotswap.agent.plugin.hotswapper;
 
 
 import org.hotswap.agent.annotation.FileEvent;
@@ -16,13 +16,13 @@ import org.hotswap.agent.util.PluginManagerInvoker;
 import java.util.HashMap;
 import java.util.Map;
 
-@Plugin(name = "JRebel",
-        description = "redefine class after class change if jrebel exists.",
+@Plugin(name = "FixRedefinePlugin",
+        description = "fix redefine ability after class change.",
         testedVersions = {"All"},
         expectedVersions = {"All"})
-public class JRebelPlugin {
-    private static final AgentLogger LOGGER = AgentLogger.getLogger(JRebelPlugin.class);
-    static boolean existJRebel;
+public class FixRedefinePlugin {
+    private static final AgentLogger LOGGER = AgentLogger.getLogger(FixRedefinePlugin.class);
+    static boolean exists;
     @Init
     PluginManager pluginManager;
     @Init
@@ -39,11 +39,11 @@ public class JRebelPlugin {
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         for (StackTraceElement stackTraceElement : stackTrace) {
             if (stackTraceElement.getClassName().startsWith("com.zeroturnaround.javarebel")) {
-                existJRebel = true;
+                exists = true;
                 break;
             }
         }
-        JRebelPlugin plugin = PluginManagerInvoker.callInitializePlugin(JRebelPlugin.class, appClassLoader);
+        FixRedefinePlugin plugin = PluginManagerInvoker.callInitializePlugin(FixRedefinePlugin.class, appClassLoader);
         plugin.initHotswapCommand();
     }
 
@@ -53,7 +53,7 @@ public class JRebelPlugin {
 
     @OnClassFileEvent(classNameRegexp = ".*", events = {FileEvent.MODIFY, FileEvent.CREATE})
     public void registerClassListeners(CtClass ctClass, ClassLoader appClassLoader) {
-        if (!existJRebel) {
+        if (!exists) {
             return;
         }
         LOGGER.debug("receive ct class change:{}", ctClass.getName());
