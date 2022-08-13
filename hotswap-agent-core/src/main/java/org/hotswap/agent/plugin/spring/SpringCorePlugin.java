@@ -1,11 +1,11 @@
 package org.hotswap.agent.plugin.spring;
 
 import org.hotswap.agent.annotation.Plugin;
-import org.hotswap.agent.plugin.transformers.SpringTransformers;
+import org.hotswap.agent.plugin.transformers.SpringCoreTransformers;
 import org.hotswap.agent.util.spring.util.ObjectUtils;
 
 
-@Plugin(name = "SpringCorePlugin", testedVersions = {""}, expectedVersions = {""}, supportClass = SpringTransformers.class)
+@Plugin(name = "SpringCorePlugin", testedVersions = {""}, expectedVersions = {""}, supportClass = SpringCoreTransformers.class)
 public class SpringCorePlugin {
     private static Object beanFactory;
     private static Object applicationContext;

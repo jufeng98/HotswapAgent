@@ -8,8 +8,8 @@ import org.hotswap.agent.javassist.CtMethod;
 import org.hotswap.agent.javassist.NotFoundException;
 import org.hotswap.agent.logging.AgentLogger;
 
-public class SpringTransformers {
-    private static final AgentLogger LOGGER = AgentLogger.getLogger(SpringTransformers.class);
+public class SpringCoreTransformers {
+    private static final AgentLogger LOGGER = AgentLogger.getLogger(SpringCoreTransformers.class);
 
     @OnClassLoadEvent(classNameRegexp = "org.springframework.context.support.AbstractApplicationContext")
     public static void patchAbstractApplicationContext(CtClass ctClass, ClassPool classPool)
