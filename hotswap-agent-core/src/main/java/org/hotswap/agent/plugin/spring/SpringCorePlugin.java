@@ -6,7 +6,7 @@ import org.hotswap.agent.util.spring.util.ObjectUtils;
 
 
 @Plugin(name = "SpringCorePlugin", testedVersions = {""}, expectedVersions = {""}, supportClass = SpringTransformers.class)
-public class SpringPlugin {
+public class SpringCorePlugin {
     private static Object beanFactory;
     private static Object applicationContext;
 
@@ -14,7 +14,7 @@ public class SpringPlugin {
         if (beanFactory != null) {
             return (T) beanFactory;
         }
-        beanFactory = ObjectUtils.getStaticFieldValue(SpringPlugin.class.getName(), "beanFactory");
+        beanFactory = ObjectUtils.getStaticFieldValue(SpringCorePlugin.class.getName(), "beanFactory");
         return (T) beanFactory;
     }
 
@@ -22,15 +22,15 @@ public class SpringPlugin {
         if (applicationContext != null) {
             return (T) applicationContext;
         }
-        applicationContext = ObjectUtils.getStaticFieldValue(SpringPlugin.class.getName(), "applicationContext");
+        applicationContext = ObjectUtils.getStaticFieldValue(SpringCorePlugin.class.getName(), "applicationContext");
         return (T) applicationContext;
     }
 
     public static void setBeanFactory(Object beanFactory) {
-        SpringPlugin.beanFactory = beanFactory;
+        SpringCorePlugin.beanFactory = beanFactory;
     }
 
     public static void setApplicationContext(Object applicationContext) {
-        SpringPlugin.applicationContext = applicationContext;
+        SpringCorePlugin.applicationContext = applicationContext;
     }
 }

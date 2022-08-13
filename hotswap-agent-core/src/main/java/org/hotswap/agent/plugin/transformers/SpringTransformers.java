@@ -17,8 +17,8 @@ public class SpringTransformers {
         CtMethod method = ctClass.getDeclaredMethod("obtainFreshBeanFactory");
         StringBuilder src = new StringBuilder();
         src.append("{");
-        src.append("    org.hotswap.agent.plugin.spring.SpringPlugin.setApplicationContext(this);");
-        src.append("    org.hotswap.agent.plugin.spring.SpringPlugin.setBeanFactory($_);");
+        src.append("    org.hotswap.agent.plugin.spring.SpringCorePlugin.setApplicationContext(this);");
+        src.append("    org.hotswap.agent.plugin.spring.SpringCorePlugin.setBeanFactory($_);");
         src.append("    return $_;");
         src.append("}");
         method.insertAfter(src.toString());

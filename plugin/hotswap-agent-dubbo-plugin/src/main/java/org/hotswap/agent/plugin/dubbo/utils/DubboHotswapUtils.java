@@ -8,7 +8,7 @@ import com.alibaba.dubbo.config.spring.beans.factory.annotation.ReferenceAnnotat
 import com.alibaba.dubbo.config.spring.beans.factory.annotation.ServiceAnnotationBeanPostProcessor;
 import org.hotswap.agent.logging.AgentLogger;
 import org.hotswap.agent.plugin.dubbo.DubboRefreshCommands;
-import org.hotswap.agent.plugin.spring.SpringPlugin;
+import org.hotswap.agent.plugin.spring.SpringCorePlugin;
 import org.hotswap.agent.util.spring.util.ReflectionUtils;
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.aop.support.AopUtils;
@@ -58,7 +58,7 @@ public class DubboHotswapUtils {
             beanDefinition = getBeanDefinition(interfaceName);
         }
         ReferenceBean<?> referenceBean = new ReferenceBean<>();
-        referenceBean.setApplicationContext(SpringPlugin.getApplicationContext());
+        referenceBean.setApplicationContext(SpringCorePlugin.getApplicationContext());
         BeanWrapper beanWrapper = new BeanWrapperImpl(referenceBean);
         List<PropertyValue> propertyValueList = beanDefinition.getPropertyValues().getPropertyValueList();
         for (PropertyValue propertyValue : propertyValueList) {
@@ -69,7 +69,7 @@ public class DubboHotswapUtils {
         Object proxy = referenceBean.getObject();
         Object newHandler = ReflectionUtils.getField("handler", Objects.requireNonNull(proxy));
 
-        ConfigurableListableBeanFactory beanFactory = SpringPlugin.getBeanFactory();
+        ConfigurableListableBeanFactory beanFactory = SpringCorePlugin.getBeanFactory();
         Object originalProxy;
         try {
             originalProxy = beanFactory.getBean(id);
@@ -83,12 +83,12 @@ public class DubboHotswapUtils {
     public static void replaceServiceBean(Class<?> clz, ServiceBean<?> oldBean, Service service) {
         try {
             ServiceBean<Object> serviceBean = new ServiceBean<>();
-            ApplicationContext applicationContext = SpringPlugin.getApplicationContext();
+            ApplicationContext applicationContext = SpringCorePlugin.getApplicationContext();
             serviceBean.setApplicationContext(applicationContext);
             serviceBean.setApplicationEventPublisher(applicationContext);
 
             ServiceAnnotationBeanPostProcessor processor = getTargetBean(ServiceAnnotationBeanPostProcessor.class);
-            ConfigurableListableBeanFactory beanFactory = SpringPlugin.getBeanFactory();
+            ConfigurableListableBeanFactory beanFactory = SpringCorePlugin.getBeanFactory();
             String beanName = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, clz)[0];
 
             BeanWrapper beanWrapper = new BeanWrapperImpl(serviceBean);
@@ -110,7 +110,7 @@ public class DubboHotswapUtils {
     }
 
     public static BeanDefinition getBeanDefinition(String id) {
-        ConfigurableListableBeanFactory beanFactory = SpringPlugin.getBeanFactory();
+        ConfigurableListableBeanFactory beanFactory = SpringCorePlugin.getBeanFactory();
         BeanDefinition beanDefinition = null;
         try {
             beanDefinition = beanFactory.getBeanDefinition(id);
@@ -127,7 +127,7 @@ public class DubboHotswapUtils {
     }
 
     public static <T> T getTargetBean(Class<T> clz) {
-        ConfigurableListableBeanFactory beanFactory = SpringPlugin.getBeanFactory();
+        ConfigurableListableBeanFactory beanFactory = SpringCorePlugin.getBeanFactory();
         Object target = beanFactory.getBean(clz);
         if (AopUtils.isAopProxy(target) || AopUtils.isJdkDynamicProxy(target)) {
             target = AopProxyUtils.getSingletonTarget(target);

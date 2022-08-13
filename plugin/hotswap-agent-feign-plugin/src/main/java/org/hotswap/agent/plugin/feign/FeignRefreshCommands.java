@@ -3,7 +3,7 @@ package org.hotswap.agent.plugin.feign;
 import feign.Client;
 import feign.Target;
 import org.hotswap.agent.logging.AgentLogger;
-import org.hotswap.agent.plugin.spring.SpringPlugin;
+import org.hotswap.agent.plugin.spring.SpringCorePlugin;
 import org.hotswap.agent.util.spring.util.ReflectionUtils;
 import org.hotswap.agent.util.spring.util.StringUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -43,7 +43,7 @@ public class FeignRefreshCommands {
 
     public static void changeFeignServiceUrl(String feignName, String newUrl) {
         try {
-            ConfigurableListableBeanFactory context = SpringPlugin.getBeanFactory();
+            ConfigurableListableBeanFactory context = SpringCorePlugin.getBeanFactory();
 
             boolean resetFlag = StringUtils.isEmpty(newUrl);
 
