@@ -10,13 +10,10 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.io.FileSystemResource;
 
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static org.hotswap.agent.plugin.feign.FeignPlugin.getMapFromPlugin;
 
 /**
  * @author yudong
@@ -25,27 +22,23 @@ public class FeignRefreshCommands {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(FeignRefreshCommands.class);
     private static final Map<String, Object> ORIGINAL_MAP = new ConcurrentHashMap<>();
 
-    public static void reloadConfiguration() {
+    public static void reloadPropertiesChange(String absolutePath) {
         try {
-            Map<String, String> absolutePaths = getMapFromPlugin("absolutePaths");
-            refreshPropertiesChange(absolutePaths);
+            refreshPropertiesChange(absolutePath);
         } catch (Exception e) {
-            LOGGER.error("reloadConfiguration error", e);
+            LOGGER.error("reload error", e);
         }
     }
 
 
-    public static void refreshPropertiesChange(Map<String, String> paths) throws Exception {
-        for (Map.Entry<String, String> entry : new HashMap<>(paths).entrySet()) {
-            FileSystemResource resource = new FileSystemResource(entry.getKey());
-            LOGGER.debug("refresh properties:{}", resource.getPath());
-            Properties properties = new Properties();
-            try (InputStream inputStream = resource.getInputStream()) {
-                properties.load(inputStream);
-            }
-            properties.forEach((key, value) -> changeFeignServiceUrl(key.toString(), value.toString()));
+    public static void refreshPropertiesChange(String absolutePath) throws Exception {
+        FileSystemResource resource = new FileSystemResource(absolutePath);
+        LOGGER.debug("refresh properties:{}", resource.getPath());
+        Properties properties = new Properties();
+        try (InputStream inputStream = resource.getInputStream()) {
+            properties.load(inputStream);
         }
-        paths.clear();
+        properties.forEach((key, value) -> changeFeignServiceUrl(key.toString(), value.toString()));
     }
 
     public static void changeFeignServiceUrl(String feignName, String newUrl) {

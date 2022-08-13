@@ -3,30 +3,21 @@ package org.hotswap.agent.plugin.dubbo;
 import org.hotswap.agent.annotation.FileEvent;
 import org.hotswap.agent.annotation.Init;
 import org.hotswap.agent.annotation.LoadEvent;
-import org.hotswap.agent.annotation.OnClassFileEvent;
 import org.hotswap.agent.annotation.OnClassLoadEvent;
 import org.hotswap.agent.annotation.OnResourceFileEvent;
 import org.hotswap.agent.annotation.Plugin;
-import org.hotswap.agent.command.Command;
 import org.hotswap.agent.command.ReflectionCommand;
 import org.hotswap.agent.command.Scheduler;
 import org.hotswap.agent.config.PluginConfiguration;
-import org.hotswap.agent.javassist.CtClass;
 import org.hotswap.agent.logging.AgentLogger;
 import org.hotswap.agent.plugin.dubbo.transformers.DubboTransformers;
-import org.hotswap.agent.util.spring.util.ClassUtils;
 import org.hotswap.agent.util.spring.util.ReflectionUtils;
 
-import java.lang.instrument.ClassDefinition;
-import java.lang.instrument.Instrumentation;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static org.hotswap.agent.util.spring.util.ObjectUtils.getStaticFieldValue;
 
 /**
  * Reload Dubbo configuration after entity change.
@@ -44,13 +35,7 @@ public class DubboPlugin {
     Scheduler scheduler;
     @Init
     ClassLoader appClassLoader;
-    @Init
-    Instrumentation instrumentation;
     static Map<String, Object> serviceBeans = new HashMap<>(64);
-    static Map<String, String> absolutePaths = new ConcurrentHashMap<>(32);
-    static Map<String, Class<?>> clazzes = new ConcurrentHashMap<>(32);
-    Command reloadConfigurationCommand =
-            new ReflectionCommand(this, DubboRefreshCommands.class.getName(), "reloadConfiguration");
 
     @Init
     public void init(PluginConfiguration pluginConfiguration) {
@@ -66,39 +51,18 @@ public class DubboPlugin {
     @OnClassLoadEvent(classNameRegexp = ".*", events = LoadEvent.REDEFINE)
     public void registerClassListeners(Class<?> clazz) {
         LOGGER.debug("receive class change:{}", clazz.getName());
-        clazzes.put(clazz.getName(), clazz);
-        refresh();
-    }
-
-    @OnClassFileEvent(classNameRegexp = ".*", events = FileEvent.MODIFY)
-    public void registerClassListeners(CtClass clazz) {
-        LOGGER.debug("receive ct class change:{}", clazz.getName());
-        try {
-            Class<?> clz = ClassUtils.getClassFromClassloader(clazz.getName(), appClassLoader);
-            instrumentation.redefineClasses(new ClassDefinition(clz, clazz.toBytecode()));
-        } catch (Exception e) {
-            LOGGER.error("error", e);
-        }
+        ReflectionCommand reflectionCommand = new ReflectionCommand(this, DubboRefreshCommands.class.getName(),
+                "reloadAfterClassRedefine", appClassLoader, clazz, serviceBeans);
+        scheduler.scheduleCommand(reflectionCommand, 500);
     }
 
     @OnResourceFileEvent(path = "/", filter = ".*hotswap-dubbo.properties", events = {FileEvent.MODIFY, FileEvent.CREATE})
     public void registerResourceListeners(URL url) throws URISyntaxException {
         LOGGER.debug("receive properties change:{}", url);
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
-        absolutePaths.put(absolutePath, absolutePath);
-        refresh();
+        ReflectionCommand reflectionCommand = new ReflectionCommand(this, DubboRefreshCommands.class.getName(),
+                "reloadPropertiesChange", appClassLoader, absolutePath);
+        scheduler.scheduleCommand(reflectionCommand, 500);
     }
 
-    private void refresh() {
-        scheduler.scheduleCommand(reloadConfigurationCommand, 500);
-    }
-
-
-    public static <T> T getMapFromPlugin(String name) {
-        Map<?, ?> val = getStaticFieldValue(DubboPlugin.class.getClassLoader(), DubboPlugin.class.getName(), name);
-        if (!val.isEmpty()) {
-            return (T) val;
-        }
-        return getStaticFieldValue(ClassLoader.getSystemClassLoader(), DubboPlugin.class.getName(), name);
-    }
 }
