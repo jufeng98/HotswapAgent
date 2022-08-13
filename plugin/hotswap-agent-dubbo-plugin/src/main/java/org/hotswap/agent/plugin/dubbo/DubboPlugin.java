@@ -19,6 +19,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.hotswap.agent.util.spring.util.ObjectUtils.getStaticFieldValue;
+
 /**
  * Reload Dubbo configuration after entity change.
  *
@@ -52,7 +54,7 @@ public class DubboPlugin {
     public void registerClassListeners(Class<?> clazz) {
         LOGGER.debug("receive class change:{}", clazz.getName());
         ReflectionCommand reflectionCommand = new ReflectionCommand(this, DubboRefreshCommands.class.getName(),
-                "reloadAfterClassRedefine", appClassLoader, clazz, serviceBeans);
+                "reloadAfterClassRedefine", appClassLoader, clazz);
         scheduler.scheduleCommand(reflectionCommand, 500);
     }
 
@@ -65,4 +67,11 @@ public class DubboPlugin {
         scheduler.scheduleCommand(reflectionCommand, 500);
     }
 
+    public static <T> T getMapFromPlugin(String name) {
+        Map<?, ?> val = getStaticFieldValue(DubboPlugin.class.getClassLoader(), DubboPlugin.class.getName(), name);
+        if (!val.isEmpty()) {
+            return (T) val;
+        }
+        return getStaticFieldValue(ClassLoader.getSystemClassLoader(), DubboPlugin.class.getName(), name);
+    }
 }

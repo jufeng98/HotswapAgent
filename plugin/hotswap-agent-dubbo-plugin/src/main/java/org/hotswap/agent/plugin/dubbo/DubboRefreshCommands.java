@@ -21,9 +21,9 @@ import java.util.Properties;
 public class DubboRefreshCommands {
     private static final AgentLogger LOGGER = AgentLogger.getLogger(DubboRefreshCommands.class);
 
-    public static void reloadAfterClassRedefine(Class<?> clazz, Map<String, Object> serviceBeans) {
+    public static void reloadAfterClassRedefine(Class<?> clazz) {
         try {
-            refreshClassChange(clazz, serviceBeans);
+            refreshClassChange(clazz);
         } catch (Exception e) {
             LOGGER.error("reload error", e);
         }
@@ -37,7 +37,7 @@ public class DubboRefreshCommands {
         }
     }
 
-    private static void refreshClassChange(Class<?> clz, Map<String, Object> serviceBeans) throws Exception {
+    private static void refreshClassChange(Class<?> clz) throws Exception {
         LOGGER.debug("refresh class:{}", clz);
         for (Field declaredField : clz.getDeclaredFields()) {
             Reference reference = declaredField.getAnnotation(Reference.class);
@@ -48,6 +48,7 @@ public class DubboRefreshCommands {
 
         Service service = clz.getAnnotation(Service.class);
         if (service != null) {
+            Map<String, Object> serviceBeans = DubboPlugin.getMapFromPlugin("serviceBeans");
             for (Class<?> anInterface : clz.getInterfaces()) {
                 ServiceBean<?> oldServiceBean = (ServiceBean<?>) serviceBeans.get(anInterface.getName());
                 if (oldServiceBean != null) {
