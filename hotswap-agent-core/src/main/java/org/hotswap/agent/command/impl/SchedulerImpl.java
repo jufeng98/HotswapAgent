@@ -58,6 +58,10 @@ public class SchedulerImpl implements Scheduler {
 
     @Override
     public void scheduleCommand(Command command, int timeout) {
+        if (timeout == 0) {
+            command.executeCommand();
+            return;
+        }
         scheduleCommand(command, timeout, DuplicateSheduleBehaviour.WAIT_AND_RUN_AFTER);
     }
 

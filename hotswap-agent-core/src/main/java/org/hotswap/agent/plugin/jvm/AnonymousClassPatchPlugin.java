@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import org.hotswap.agent.HotswapAgent;
 import org.hotswap.agent.annotation.Init;
 import org.hotswap.agent.annotation.LoadEvent;
 import org.hotswap.agent.annotation.OnClassLoadEvent;
@@ -91,9 +92,11 @@ public class AnonymousClassPatchPlugin {
      * If no compatible class exists, replace with compatible empty implementation.
      */
     @OnClassLoadEvent(classNameRegexp = ".*\\$\\d+", events = LoadEvent.REDEFINE)
-    public static CtClass patchAnonymousClass(ClassLoader classLoader, ClassPool classPool, String className, Class original)
+    public static CtClass patchAnonymousClass(ClassLoader classLoader, ClassPool classPool, String className, Class original,CtClass ctClz)
             throws IOException, NotFoundException, CannotCompileException {
-
+        if (HotswapAgent.isExists()) {
+            return ctClz;
+        }
         String javaClass = className.replaceAll("/", ".");
         String mainClass = javaClass.replaceAll("\\$\\d+$", "");
 
@@ -175,7 +178,10 @@ public class AnonymousClassPatchPlugin {
      */
     @OnClassLoadEvent(classNameRegexp = ".*", events = LoadEvent.REDEFINE)
     public static byte[] patchMainClass(String className, ClassPool classPool, CtClass ctClass,
-                                        ClassLoader classLoader, ProtectionDomain protectionDomain) throws IOException, CannotCompileException, NotFoundException {
+                                        ClassLoader classLoader, ProtectionDomain protectionDomain,byte[] bytes) throws IOException, CannotCompileException, NotFoundException {
+        if (HotswapAgent.isExists()) {
+            return bytes;
+        }
         String javaClassName = className.replaceAll("/", ".");
 
         // check if has anonymous classes

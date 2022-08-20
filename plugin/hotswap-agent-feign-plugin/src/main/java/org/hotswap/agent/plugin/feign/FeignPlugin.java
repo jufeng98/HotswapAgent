@@ -13,9 +13,6 @@ import org.hotswap.agent.plugin.feign.transformers.FeignTransformers;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
-import java.util.Map;
-
-import static org.hotswap.agent.util.spring.util.ObjectUtils.getStaticFieldValue;
 
 /**
  * Reload Feign configuration after entity change.
@@ -39,20 +36,13 @@ public class FeignPlugin {
         LOGGER.info("Feign plugin initialized.");
     }
 
-    @OnResourceFileEvent(path = "/", filter = ".*hotswap-feign.properties", events = {FileEvent.MODIFY, FileEvent.CREATE})
+    @OnResourceFileEvent(path = "/", filter = ".*hotswap-feign.properties", events = {FileEvent.MODIFY})
     public void registerResourceListeners(URL url) throws URISyntaxException {
         LOGGER.debug("receive properties change:{}", url);
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
         ReflectionCommand reflectionCommand = new ReflectionCommand(this, FeignRefreshCommands.class.getName(),
                 "reloadPropertiesChange", appClassLoader, absolutePath);
-        scheduler.scheduleCommand(reflectionCommand, 500);
+        scheduler.scheduleCommand(reflectionCommand, 0);
     }
 
-    public static <T> T getMapFromPlugin(String name) {
-        Map<?, ?> val = getStaticFieldValue(FeignPlugin.class.getClassLoader(), FeignPlugin.class.getName(), name);
-        if (!val.isEmpty()) {
-            return (T) val;
-        }
-        return getStaticFieldValue(ClassLoader.getSystemClassLoader(), FeignPlugin.class.getName(), name);
-    }
 }

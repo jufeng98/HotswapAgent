@@ -32,11 +32,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import org.hotswap.agent.annotation.handler.PluginClassFileTransformer;
 import org.hotswap.agent.command.Command;
 import org.hotswap.agent.config.PluginManager;
+import org.hotswap.agent.config.TransformHolder;
 import org.hotswap.agent.logging.AgentLogger;
 
 /**
@@ -77,6 +79,8 @@ public class HotswapTransformer implements ClassFileTransformer {
     protected Map<ClassFileTransformer, ClassLoader> classLoaderTransformers = new LinkedHashMap<>();
 
     protected Map<ClassLoader, Object> seenClassLoaders = new WeakHashMap<>();
+
+    private Map<String, TransformHolder> redefineClassesMap = new ConcurrentHashMap<>();
 
     private List<Pattern> excludedClassLoaderPatterns;
 
@@ -184,6 +188,19 @@ public class HotswapTransformer implements ClassFileTransformer {
             return bytes;
         }
 
+        if (redefiningClass != null) {
+            LOGGER.info("need redefining class:{}", redefiningClass);
+            TransformHolder transformHolder = new TransformHolder(classLoader, className, redefiningClass,
+                    protectionDomain, bytes);
+            redefineClassesMap.put(className, transformHolder);
+            return bytes;
+        }
+
+        return transformReal(classLoader, className, null, protectionDomain, bytes);
+    }
+
+    public byte[] transformReal(final ClassLoader classLoader, String className, Class<?> redefiningClass,
+                                final ProtectionDomain protectionDomain, byte[] bytes){
         LOGGER.trace("Transform on class '{}' @{} redefiningClass '{}'.", className, classLoader, redefiningClass);
 
         List<ClassFileTransformer> toApply = new ArrayList<>();
@@ -231,30 +248,40 @@ public class HotswapTransformer implements ClassFileTransformer {
         }
 
         // ensure classloader initialized
-       ensureClassLoaderInitialized(classLoader, protectionDomain);
+        ensureClassLoaderInitialized(classLoader, protectionDomain);
 
         if(toApply.isEmpty() && pluginTransformers.isEmpty()) {
             LOGGER.trace("No transformers defing for {} ", className);
             return bytes;
         }
 
-       try {
-           byte[] result = bytes;
+        try {
+            byte[] result = bytes;
 
-           for(ClassFileTransformer transformer: pluginTransformers) {
-               LOGGER.trace("Transforming class '" + className + "' with transformer '" + transformer + "' " + "@ClassLoader" + classLoader + ".");
-               result = transformer.transform(classLoader, className, redefiningClass, protectionDomain, result);
-           }
+            for(ClassFileTransformer transformer: pluginTransformers) {
+                LOGGER.trace("Transforming class '" + className + "' with transformer '" + transformer + "' " + "@ClassLoader" + classLoader + ".");
+                result = transformer.transform(classLoader, className, redefiningClass, protectionDomain, result);
+            }
 
-           for(ClassFileTransformer transformer: toApply) {
-               LOGGER.trace("Transforming class '" + className + "' with transformer '" + transformer + "' " + "@ClassLoader" + classLoader + ".");
-               result = transformer.transform(classLoader, className, redefiningClass, protectionDomain, result);
-           }
-           return result;
-       } catch (Throwable t) {
-           LOGGER.error("Error transforming class '" + className + "'.", t);
-       }
-       return bytes;
+            for(ClassFileTransformer transformer: toApply) {
+                LOGGER.trace("Transforming class '" + className + "' with transformer '" + transformer + "' " + "@ClassLoader" + classLoader + ".");
+                result = transformer.transform(classLoader, className, redefiningClass, protectionDomain, result);
+            }
+            return result;
+        } catch (Throwable t) {
+            LOGGER.error("Error transforming class '" + className + "'.", t);
+        }
+        return bytes;
+    }
+
+    public void transformRedefineClasses(){
+        LOGGER.debug("redefine classes:{}", redefineClassesMap);
+        Map<String, TransformHolder> map = new HashMap<>(redefineClassesMap);
+        for (TransformHolder value : map.values()) {
+            transformReal(value.getClassLoader(), value.getClassName(), value.getRedefiningClass(),
+                    value.getProtectionDomain(), value.getBytes());
+        }
+        redefineClassesMap.clear();
     }
 
     LinkedList<PluginClassFileTransformer> reduce(final ClassLoader classLoader, List<PluginClassFileTransformer> pluginCalls, String className) {

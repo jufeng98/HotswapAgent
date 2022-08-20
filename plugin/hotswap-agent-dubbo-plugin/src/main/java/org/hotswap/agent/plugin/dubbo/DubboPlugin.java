@@ -52,19 +52,19 @@ public class DubboPlugin {
 
     @OnClassLoadEvent(classNameRegexp = ".*", events = LoadEvent.REDEFINE)
     public void registerClassListeners(Class<?> clazz) {
-        LOGGER.debug("receive class change:{}", clazz.getName());
+        LOGGER.debug("receive class redefine:{}", clazz.getName());
         ReflectionCommand reflectionCommand = new ReflectionCommand(this, DubboRefreshCommands.class.getName(),
                 "reloadAfterClassRedefine", appClassLoader, clazz);
-        scheduler.scheduleCommand(reflectionCommand, 500);
+        scheduler.scheduleCommand(reflectionCommand, 0);
     }
 
-    @OnResourceFileEvent(path = "/", filter = ".*hotswap-dubbo.properties", events = {FileEvent.MODIFY, FileEvent.CREATE})
+    @OnResourceFileEvent(path = "/", filter = ".*hotswap-dubbo.properties", events = {FileEvent.MODIFY})
     public void registerResourceListeners(URL url) throws URISyntaxException {
         LOGGER.debug("receive properties change:{}", url);
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
         ReflectionCommand reflectionCommand = new ReflectionCommand(this, DubboRefreshCommands.class.getName(),
                 "reloadPropertiesChange", appClassLoader, absolutePath);
-        scheduler.scheduleCommand(reflectionCommand, 500);
+        scheduler.scheduleCommand(reflectionCommand, 0);
     }
 
     public static <T> T getMapFromPlugin(String name) {

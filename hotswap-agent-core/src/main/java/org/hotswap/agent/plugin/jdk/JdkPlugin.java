@@ -20,6 +20,7 @@ package org.hotswap.agent.plugin.jdk;
 
 import java.util.Map;
 
+import org.hotswap.agent.HotswapAgent;
 import org.hotswap.agent.annotation.LoadEvent;
 import org.hotswap.agent.annotation.OnClassLoadEvent;
 import org.hotswap.agent.annotation.Plugin;
@@ -55,6 +56,9 @@ public class JdkPlugin {
 
     @OnClassLoadEvent(classNameRegexp = ".*", events = LoadEvent.REDEFINE, skipSynthetic=false)
     public static void flushBeanIntrospectorCaches(ClassLoader classLoader, CtClass ctClass) {
+        if (HotswapAgent.isExists()) {
+            return;
+        }
         try {
             LOGGER.debug("Flushing {} from introspector", ctClass.getName());
 
@@ -98,6 +102,9 @@ public class JdkPlugin {
 
     @OnClassLoadEvent(classNameRegexp = ".*", events = LoadEvent.REDEFINE, skipSynthetic=false)
     public static void flushIntrospectClassInfoCache(ClassLoader classLoader, CtClass ctClass) {
+        if (HotswapAgent.isExists()) {
+            return;
+        }
         // com.sun.beans.introspect.ClassInfo was intruduced in j9
         if (ClassFile.MAJOR_VERSION < ClassFile.JAVA_9) {
             return;
@@ -121,6 +128,9 @@ public class JdkPlugin {
 
     @OnClassLoadEvent(classNameRegexp = ".*", events = LoadEvent.REDEFINE, skipSynthetic=false)
     public static void flushObjectStreamCaches(ClassLoader classLoader, CtClass ctClass) {
+        if (HotswapAgent.isExists()) {
+            return;
+        }
         try {
             LOGGER.debug("Flushing {} from ObjectStreamClass caches", ctClass.getName());
 

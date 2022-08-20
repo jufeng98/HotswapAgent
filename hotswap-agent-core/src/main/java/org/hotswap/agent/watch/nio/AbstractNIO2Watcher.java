@@ -299,7 +299,7 @@ public abstract class AbstractNIO2Watcher implements Watcher {
         runner.setName("HotSwap Watcher");
         runner.start();
 
-        dispatcher.start();
+//        dispatcher.start();
     }
 
     @Override
@@ -324,5 +324,9 @@ public abstract class AbstractNIO2Watcher implements Watcher {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public EventDispatcher getDispatcher() {
+        return dispatcher;
     }
 }

@@ -129,7 +129,7 @@ public class MyBatisTransformers {
         CtMethod method;
         try {
             method = ctClass.getDeclaredMethod("getStatementResultMaps");
-        } catch (NotFoundException e) {
+        } catch (Exception e) {
             method = ctClass.getDeclaredMethod("setStatementResultMap");
         }
         method.addCatch(

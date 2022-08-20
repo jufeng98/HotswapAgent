@@ -49,7 +49,7 @@ public class DubboHotswapUtils {
         Object proxy = ReflectionUtils.invokeMethod(method, processor, name, referenceBean, declaredField.getType());
 
         ReflectionUtils.setField(declaredField, targetBean, proxy);
-        LOGGER.info("refresh dubbo reference field:{}#{} success", clz.getName(), declaredField.getName());
+        LOGGER.info("reconfiguration reference field:{}#{} success", clz.getSimpleName(), declaredField.getName());
     }
 
     public static void replaceReferenceXml(String id, String interfaceName, String newUrl) throws Exception {
@@ -77,7 +77,7 @@ public class DubboHotswapUtils {
             originalProxy = beanFactory.getBean(interfaceName);
         }
         ReflectionUtils.setField("handler", originalProxy, newHandler);
-        LOGGER.info("refresh dubbo xml reference:{}@{} success", interfaceName, id);
+        LOGGER.info("reconfiguration xml reference:{}@{} success", interfaceName, id);
     }
 
     public static void replaceServiceBean(Class<?> clz, ServiceBean<?> oldBean, Service service) {
@@ -103,9 +103,9 @@ public class DubboHotswapUtils {
             serviceBean.afterPropertiesSet();
             serviceBean.export();
             oldBean.unexport();
-            LOGGER.info("refresh dubbo service {} success", oldBean.getId());
+            LOGGER.info("reconfiguration service {} success", oldBean.getId());
         } catch (Exception e) {
-            LOGGER.error("refresh dubbo service error:{}", e, oldBean.getId());
+            LOGGER.error("reconfiguration service error:{}", e, oldBean.getId());
         }
     }
 

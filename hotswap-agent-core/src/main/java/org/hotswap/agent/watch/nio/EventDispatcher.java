@@ -68,6 +68,14 @@ public class EventDispatcher implements Runnable {
             this.event = event;
             this.path = path;
         }
+
+        @Override
+        public String toString() {
+            return "Event{" +
+                    "event.kind=" + event.kind().name() +
+                    ", path=" + path +
+                    '}';
+        }
     }
 
     /** The map of listeners.  This is managed by the watcher service*/
@@ -139,6 +147,15 @@ public class EventDispatcher implements Runnable {
                 return;
             }
         }
+    }
+
+    public void dispatchEvents(){
+        LOGGER.debug("dispatch events:{}", eventQueue);
+        eventQueue.drainTo(working);
+        for (Event e : working) {
+            callListeners(e.event, e.path);
+        }
+        working.clear();
     }
 
     /**

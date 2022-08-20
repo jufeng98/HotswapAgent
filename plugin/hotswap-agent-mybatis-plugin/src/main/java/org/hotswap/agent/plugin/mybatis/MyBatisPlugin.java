@@ -18,12 +18,6 @@
  */
 package org.hotswap.agent.plugin.mybatis;
 
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.hotswap.agent.annotation.FileEvent;
 import org.hotswap.agent.annotation.Init;
 import org.hotswap.agent.annotation.OnResourceFileEvent;
@@ -34,6 +28,14 @@ import org.hotswap.agent.command.Scheduler;
 import org.hotswap.agent.config.PluginConfiguration;
 import org.hotswap.agent.logging.AgentLogger;
 import org.hotswap.agent.plugin.mybatis.transformers.MyBatisTransformers;
+
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.hotswap.agent.util.spring.util.ObjectUtils.getStaticFieldValue;
 
 /**
  * Reload MyBatis configuration after entity create/change.
@@ -50,9 +52,6 @@ public class MyBatisPlugin {
 
     @Init
     Scheduler scheduler;
-
-    @Init
-    ClassLoader appClassLoader;
 
     static Map<String, Object> mapperMap = new HashMap<>();
     static Map<String, Object> configMap = new HashMap<>();
@@ -84,14 +83,15 @@ public class MyBatisPlugin {
         String absolutePath = Paths.get(url.toURI()).toFile().getAbsolutePath();
         if (mapperMap.containsKey(absolutePath) || configMap.containsKey(absolutePath)) {
             LOGGER.debug("MyBatisPlugin - registerResourceListeners : {}", url);
-            refresh(500);
+            scheduler.scheduleCommand(reloadConfigurationCommand, 0);
         }
     }
 
-    // reload the configuration - schedule a command to run in the application classloader and merge
-    // duplicate commands.
-    private void refresh(int timeout) {
-        scheduler.scheduleCommand(reloadConfigurationCommand, timeout);
+    public static <T> T getMapFromPlugin(String name) {
+        Map<?, ?> val = getStaticFieldValue(MyBatisPlugin.class.getClassLoader(), MyBatisPlugin.class.getName(), name);
+        if (!val.isEmpty()) {
+            return (T) val;
+        }
+        return getStaticFieldValue(ClassLoader.getSystemClassLoader(), MyBatisPlugin.class.getName(), name);
     }
-
 }

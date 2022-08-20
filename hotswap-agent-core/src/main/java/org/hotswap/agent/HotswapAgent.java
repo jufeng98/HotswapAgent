@@ -52,6 +52,8 @@ public class HotswapAgent {
      */
     private static boolean autoHotswap = false;
 
+    private static boolean exists = false;
+
     /**
      * Path for an external properties file `hotswap-agent.properties`
      */
@@ -66,9 +68,20 @@ public class HotswapAgent {
         LOGGER.info("Loading Hotswap agent {{}} - unlimited runtime class redefinition.", Version.version());
         parseArgs(args);
         fixJboss7Modules();
+        initExists();
         PluginManager.getInstance().init(inst);
         LOGGER.debug("Hotswap agent initialized.");
 
+    }
+
+    public static void initExists() {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (StackTraceElement stackTraceElement : stackTrace) {
+            if (stackTraceElement.getClassName().startsWith("com.zeroturnaround.javarebel")) {
+                exists = true;
+                break;
+            }
+        }
     }
 
     public static void parseArgs(String args) {
@@ -121,6 +134,10 @@ public class HotswapAgent {
      */
     public static boolean isAutoHotswap() {
         return autoHotswap;
+    }
+
+    public static boolean isExists() {
+        return exists;
     }
 
     /**

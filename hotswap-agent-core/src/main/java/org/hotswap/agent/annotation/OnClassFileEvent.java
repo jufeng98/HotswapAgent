@@ -62,5 +62,5 @@ public @interface OnClassFileEvent {
     /**
      * Merge multiple same watch events up to this timeout into a single watch event (useful to merge multiple MODIFY events).
      */
-    public int timeout() default 50;
+    public int timeout() default 0;
 }

@@ -10,24 +10,21 @@ import org.hotswap.agent.logging.AgentLogger;
 
 /**
  * @author yudong
- * @date 2022/8/1
+ * @date 2022/8/20
  */
-public class SpringCoreTransformers {
-    private static final AgentLogger LOGGER = AgentLogger.getLogger(SpringCoreTransformers.class);
+public class RefreshTransformers {
+    private static final AgentLogger LOGGER = AgentLogger.getLogger(RefreshTransformers.class);
 
-    @OnClassLoadEvent(classNameRegexp = "org.springframework.context.support.AbstractApplicationContext")
+    @OnClassLoadEvent(classNameRegexp = "org.springframework.web.servlet.DispatcherServlet")
     public static void patchAbstractApplicationContext(CtClass ctClass, ClassPool classPool)
             throws NotFoundException, CannotCompileException {
-        CtMethod method = ctClass.getDeclaredMethod("obtainFreshBeanFactory");
+        CtMethod method = ctClass.getDeclaredMethod("doService");
         StringBuilder src = new StringBuilder();
         src.append("{");
-        src.append("    org.hotswap.agent.plugin.spring.SpringCorePlugin.setApplicationContext(this);");
-        src.append("    org.hotswap.agent.plugin.spring.SpringCorePlugin.setBeanFactory($_);");
-        src.append("    return $_;");
+        src.append("    org.hotswap.agent.plugin.refresh.RefreshPlugin.refreshChanges();");
         src.append("}");
-        method.insertAfter(src.toString());
-        LOGGER.info("AbstractApplicationContext patched.");
+        method.insertBefore(src.toString());
+        LOGGER.info("DispatcherServlet patched.");
     }
-
 
 }

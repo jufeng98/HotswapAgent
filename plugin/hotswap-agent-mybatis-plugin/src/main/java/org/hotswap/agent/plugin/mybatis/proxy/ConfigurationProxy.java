@@ -19,13 +19,10 @@
 package org.hotswap.agent.plugin.mybatis.proxy;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -36,12 +33,11 @@ import org.apache.ibatis.session.Configuration;
 import org.hotswap.agent.javassist.util.proxy.MethodHandler;
 import org.hotswap.agent.javassist.util.proxy.ProxyFactory;
 import org.hotswap.agent.logging.AgentLogger;
-import org.hotswap.agent.plugin.mybatis.MyBatisPlugin;
 import org.hotswap.agent.plugin.mybatis.transformers.MyBatisTransformers;
 import org.hotswap.agent.util.ReflectionHelper;
 import org.hotswap.agent.util.spring.util.ReflectionUtils;
 
-import static org.hotswap.agent.util.spring.util.ClassUtils.getClassFromClassloader;
+import static org.hotswap.agent.plugin.mybatis.MyBatisPlugin.getMapFromPlugin;
 
 /**
  * The Class ConfigurationProxy.
@@ -64,7 +60,7 @@ public class ConfigurationProxy {
             try {
                 wrapper.refreshProxiedConfiguration();
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.error("refresh error", e);
             }
     }
 
@@ -72,13 +68,10 @@ public class ConfigurationProxy {
         this.configBuilder = configBuilder;
     }
 
-    public void refreshProxiedConfiguration() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    public void refreshProxiedConfiguration() {
         this.configuration = new Configuration();
         ReflectionHelper.invoke(configBuilder, MyBatisTransformers.REFRESH_METHOD);
-        LOGGER.info("refresh XMLConfigBuilder.");
-
         fillConfigurationWithOriginal();
-
         refreshMapperFiles();
     }
 
@@ -93,20 +86,10 @@ public class ConfigurationProxy {
         ReflectionUtils.setField("typeAliasRegistry", configuration, typeAliasRegistry);
     }
 
-    private Set<String> getMapperFiles(ClassLoader classLoader) {
-        Class<?> clz = getClassFromClassloader(MyBatisPlugin.class.getName(), classLoader);
-        Field mapperMapField = ReflectionUtils.findField(clz, "mapperMap");
-        ReflectionUtils.makeAccessible(mapperMapField);
-        Map<String, Object> map = ReflectionUtils.getField(mapperMapField, null);
-        return map.keySet();
-    }
-
     private void refreshMapperFiles() {
-        Set<String> mapperFiles1 = getMapperFiles(this.getClass().getClassLoader());
-        Set<String> mapperFiles2 = getMapperFiles(ClassLoader.getSystemClassLoader());
-        Set<String> filesSet = new HashSet<>(mapperFiles1);
-        filesSet.addAll(mapperFiles2);
-        for (String file : filesSet) {
+        Map<String, Object> map = getMapFromPlugin("mapperMap");
+        Set<String> mapperFiles = map.keySet();
+        for (String file : mapperFiles) {
             try {
                 XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(Files.newInputStream(Paths.get(file)),
                         configuration, file, configuration.getSqlFragments());
@@ -117,7 +100,7 @@ public class ConfigurationProxy {
                 ErrorContext.instance().reset();
             }
         }
-        LOGGER.debug("refresh mapper file finished:{}", filesSet);
+        LOGGER.debug("refresh mapper file finished:{}", mapperFiles);
     }
 
     private XMLConfigBuilder configBuilder;
