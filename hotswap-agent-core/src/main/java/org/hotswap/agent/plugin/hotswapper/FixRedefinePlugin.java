@@ -30,7 +30,10 @@ public class FixRedefinePlugin {
         if (!HotswapAgent.isExists()) {
             return;
         }
-        if (appClassLoader == null) {
+        if(appClassLoader == null){
+            return;
+        }
+        if (appClassLoader.getClass().getName().equals("org.apache.jasper.servlet.JasperLoader")) {
             return;
         }
         LOGGER.debug("init plugin at classLoader {}", appClassLoader);

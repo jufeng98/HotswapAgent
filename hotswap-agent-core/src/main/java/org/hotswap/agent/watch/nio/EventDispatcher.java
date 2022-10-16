@@ -152,7 +152,8 @@ public class EventDispatcher implements Runnable {
     public void dispatchEvents(){
         LOGGER.debug("dispatch events:{}", eventQueue);
         eventQueue.drainTo(working);
-        for (Event e : working) {
+        ArrayList<Event> events = new ArrayList<>(working);
+        for (Event e : events) {
             callListeners(e.event, e.path);
         }
         working.clear();
